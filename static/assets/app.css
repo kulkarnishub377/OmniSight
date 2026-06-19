@@ -1614,14 +1614,131 @@ body.light .global-search,
 body.light input, 
 body.light textarea, 
 body.light select,
-body.light .agent-terminal,
-body.light .playbook-item {
+body.light .playbook-item,
+body.light .link-grid a {
   background: #ffffff;
   color: var(--text);
+  border-color: var(--line);
 }
+
+body.light .kpi {
+  background: linear-gradient(145deg, var(--bg-card), var(--panel));
+  border-color: var(--line);
+}
+
+body.light .kpi-value {
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  -webkit-text-fill-color: initial;
+  color: var(--text);
+}
+
+body.light .emit-card {
+  background: linear-gradient(145deg, var(--bg-card), var(--panel));
+  border-color: var(--line);
+}
+
+body.light .emit-card b {
+  color: hsl(207, 95%, 45%);
+}
+
+body.light .emit-card span {
+  color: var(--muted);
+}
+
+body.light .agent-node {
+  background: var(--bg-card);
+  border-color: var(--line);
+}
+
+body.light .agent-node b {
+  color: var(--soft);
+}
+
+body.light .agent-node.completed {
+  background: rgba(52, 211, 153, 0.08);
+  border-color: var(--green);
+}
+
+body.light .agent-node.active {
+  background: rgba(103, 232, 249, 0.15);
+  border-color: var(--cyan);
+}
+
+body.light .graph-canvas {
+  background: radial-gradient(circle at center, rgba(103, 232, 249, 0.15), var(--bg) 70%);
+  border-color: var(--line);
+}
+
+body.light .graph-canvas line {
+  stroke: var(--line);
+}
+
+body.light .graph-canvas marker path {
+  fill: var(--line);
+}
+
+body.light .btn.secondary {
+  background: var(--panel-light);
+  border-color: var(--line);
+}
+
+body.light .btn.ghost:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+body.light .empty-state {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: var(--line);
+}
+
 body.light th {
   background: hsl(226, 15%, 93%);
+  color: var(--muted);
 }
+
+body.light td {
+  color: var(--soft);
+}
+
+body.light .topic {
+  background: rgba(103, 232, 249, 0.15);
+  border-color: rgba(103, 232, 249, 0.3);
+  color: hsl(207, 95%, 45%);
+}
+
+/* Light Theme Badges Contrast */
+body.light .badge {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--soft);
+  border-color: var(--line);
+}
+
+body.light .badge.acknowledged {
+  background: rgba(103, 232, 249, 0.2);
+  color: hsl(207, 95%, 45%);
+  border-color: rgba(103, 232, 249, 0.4);
+}
+
+body.light .badge.high, body.light .badge.critical {
+  background: rgba(251, 113, 133, 0.15);
+  color: hsl(350, 89%, 45%);
+  border-color: rgba(251, 113, 133, 0.3);
+}
+
+body.light .badge.medium {
+  background: rgba(251, 191, 36, 0.15);
+  color: hsl(35, 90%, 35%);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+body.light .badge.low, body.light .badge.open {
+  background: rgba(52, 211, 153, 0.12);
+  color: hsl(142, 70%, 25%);
+  border-color: rgba(52, 211, 153, 0.25);
+}
+
 body.light .pre, body.light .code, body.light .agent-terminal {
   background: #0f172a !important;
   color: #e2e8f0;
@@ -1815,4 +1932,14 @@ body.compact .main {
   .auth-hero h2 {
     font-size: 26px;
   }
+}
+
+/* Additional Light Theme Accessibility Overrides */
+body.light .tab-btn.active {
+  color: hsl(207, 95%, 45%);
+  border-bottom-color: hsl(207, 95%, 45%);
+}
+
+body.light .spotlight-input {
+  color: hsl(207, 95%, 45%);
 }
