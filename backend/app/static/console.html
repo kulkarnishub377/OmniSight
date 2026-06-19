@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#070b16" />
+  <title>AMIF Console — Autonomous Multi-Modal Intelligence Fabric</title>
+  <link rel="stylesheet" href="assets/app.css" />
+</head>
+<body>
+  <div id="toastHost" class="toast-host"></div>
+  <div id="modalHost"></div>
+  <div id="spotlight" class="spotlight hidden">
+    <div class="spotlight-card glass">
+      <div class="spotlight-input"><span>⌕</span><input id="spotlightInput" placeholder="Command palette: search views, actions, incidents..." /></div>
+      <div id="spotlightResults" class="spotlight-results"></div>
+      <div class="spotlight-help">Press Enter to run · Esc to close · Ctrl/⌘ K to open</div>
+    </div>
+  </div>
+
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-card glass">
+      <div class="brand-lockup center">
+        <div class="brand-mark">A</div>
+        <div>
+          <h1>AMIF Console</h1>
+          <p>Autonomous Multi-Modal Intelligence Fabric</p>
+        </div>
+      </div>
+      <div class="auth-hero">
+        <div class="hero-chip">Senior AI Architecture Demo</div>
+        <h2>Evidence-backed incident intelligence for modern operations.</h2>
+        <p>Ingest multimodal signals, correlate events, retrieve memory, run agent investigations, and govern actions from one operator cockpit.</p>
+      </div>
+      <form id="loginForm" class="form-grid single">
+        <label>Email<input id="loginEmail" autocomplete="username" value="admin@example.com" /></label>
+        <label>Password<input id="loginPassword" type="password" autocomplete="current-password" value="admin123" /></label>
+        <button class="btn primary wide" type="submit">Sign in to AMIF</button>
+      </form>
+      <div class="auth-foot">
+        <span>Default: admin@example.com / admin123</span>
+        <a href="architecture.html" target="_blank">Architecture</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="appShell" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="brand-lockup">
+        <div class="brand-mark">A</div>
+        <div>
+          <h1>AMIF</h1>
+          <p>Incident Intelligence</p>
+        </div>
+      </div>
+
+      <nav class="nav" id="nav">
+        <button class="nav-item active" data-view="overview"><span>⌁</span> Overview</button>
+        <button class="nav-item" data-view="incidents"><span>◆</span> Incidents</button>
+        <button class="nav-item" data-view="events"><span>◎</span> Events</button>
+        <button class="nav-item" data-view="documents"><span>▤</span> Documents & RAG</button>
+        <button class="nav-item" data-view="agents"><span>✦</span> Agent Runtime</button>
+        <button class="nav-item" data-view="graph"><span>⟐</span> Knowledge Graph</button>
+        <button class="nav-item" data-view="observability"><span>◌</span> Observability</button>
+        <button class="nav-item" data-view="security"><span>◈</span> Security & Audit</button>
+      </nav>
+
+      <div class="side-card">
+        <div class="side-card-label">Core Loop</div>
+        <div class="loop-list">
+          <span>Detect</span><span>Normalize</span><span>Correlate</span><span>Retrieve</span><span>Reason</span><span>Guard</span><span>Alert</span>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div id="sidebarUser" class="user-pill"></div>
+        <button id="logoutBtn" class="btn ghost wide">Logout</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar glass">
+        <div>
+          <div class="eyebrow">AMIF v1.0 / Production-style MVP</div>
+          <h2 id="pageTitle">Overview</h2>
+        </div>
+        <div class="top-actions">
+          <div class="global-search">
+            <span>⌕</span><input id="globalSearch" placeholder="Search incidents, events, documents..." />
+          </div>
+          <button id="commandBtn" class="btn ghost" title="Ctrl/⌘ + K">⌘K</button>
+          <button id="liveBtn" class="btn secondary" title="Toggle live refresh">Live Off</button>
+          <button id="themeBtn" class="btn ghost" title="Toggle theme">Theme</button>
+          <button id="seedDemoBtn" class="btn accent">Seed Demo</button>
+          <button id="refreshBtn" class="btn secondary">Refresh</button>
+          <button id="exportBtn" class="btn ghost">Export</button>
+          <a class="btn ghost" href="/docs" target="_blank">API Docs</a>
+        </div>
+      </header>
+
+      <section class="view active" id="view-overview">
+        <div class="kpi-grid" id="kpiGrid"></div>
+        <div class="content-grid two-one">
+          <section class="panel">
+            <div class="panel-head"><div><h3>Active Incident Command Center</h3><p>Prioritized operational incidents with evidence-backed AI summaries.</p></div><button class="btn small secondary" data-jump="incidents">Open Incidents</button></div>
+            <div id="overviewIncidents" class="stack"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><div><h3>Live Alerts</h3><p>High priority notifications and operator acknowledgements.</p></div></div>
+            <div id="overviewAlerts" class="stack"></div>
+          </section>
+        </div>
+        <div class="content-grid two">
+          <section class="panel">
+            <div class="panel-head"><div><h3>Architecture Health</h3><p>Service domains mapped to your AMIF architecture.</p></div></div>
+            <div class="health-map" id="healthMap"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><div><h3>Recent Event Timeline</h3><p>Latest normalized multimodal events.</p></div></div>
+            <div id="overviewTimeline" class="timeline"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="view-incidents">
+        <div class="toolbar panel compact">
+          <div class="filter-group">
+            <label>Status<select id="incidentStatusFilter"><option value="">All</option><option value="open">Open</option><option value="acknowledged">Acknowledged</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select></label>
+            <label>Severity<select id="incidentSeverityFilter"><option value="">All</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
+          </div>
+          <div class="toolbar-actions"><button class="btn secondary" id="clearIncidentFilters">Clear</button></div>
+        </div>
+        <div class="content-grid master-detail">
+          <section class="panel"><div class="panel-head"><div><h3>Incident Queue</h3><p>Risk-ranked, deduplicated incident stream.</p></div></div><div id="incidentList" class="stack"></div></section>
+          <section class="panel sticky-detail"><div id="incidentDetail" class="empty-state">Select an incident to inspect evidence, agent runs, and actions.</div></section>
+        </div>
+      </section>
+
+      <section class="view" id="view-events">
+        <div class="content-grid two-one">
+          <section class="panel">
+            <div class="panel-head"><div><h3>Emit Multimodal Events</h3><p>Generate demo signals through professional API boundaries.</p></div></div>
+            <div class="emit-grid">
+              <button class="emit-card" id="emitVision"><b>Vision</b><span>Forklift in restricted zone</span></button>
+              <button class="emit-card" id="emitTemp"><b>Sensor</b><span>Machine A overheating</span></button>
+              <button class="emit-card" id="emitAudio"><b>Audio</b><span>Machine noise increasing</span></button>
+            </div>
+            <div class="divider"></div>
+            <h4>Custom Event</h4>
+            <form id="customEventForm" class="form-grid two">
+              <label>Source ID<input name="source_id" value="webhook_demo" /></label>
+              <label>Source Type<input name="source_type" value="webhook" /></label>
+              <label>Event Type<input name="event_type" value="manual_observation" /></label>
+              <label>Severity<select name="severity"><option>low</option><option>medium</option><option>high</option></select></label>
+              <label class="span-2">Payload JSON<textarea name="payload">{"note":"operator observed unusual activity"}</textarea></label>
+              <button class="btn primary span-2" type="submit">Publish Canonical AMIF Event</button>
+            </form>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><div><h3>Event Bus Topics</h3><p>Redpanda-ready streaming contracts.</p></div></div>
+            <div id="topicList" class="topic-list"></div>
+          </section>
+        </div>
+        <section class="panel">
+          <div class="panel-head"><div><h3>Event Explorer</h3><p>Filter and inspect normalized operational events.</p></div><div class="filter-inline"><input id="eventFilter" placeholder="Filter by type/source/payload" /></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Type</th><th>Severity</th><th>Source</th><th>Location</th><th>Timestamp</th><th>Payload</th></tr></thead><tbody id="eventTable"></tbody></table></div>
+        </section>
+      </section>
+
+      <section class="view" id="view-documents">
+        <div class="content-grid two">
+          <section class="panel">
+            <div class="panel-head"><div><h3>Document Intelligence</h3><p>Upload manuals/SOPs into semantic memory.</p></div></div>
+            <form id="docUploadForm" class="form-grid two">
+              <label>File Name<input id="docName" value="machine_a_manual.txt" /></label>
+              <label>Asset ID<input id="docAsset" value="machine_a" /></label>
+              <label class="span-2">Document Text<textarea id="docText">Machine A Safety Manual. If operating temperature exceeds 85°C, inspect coolant flow, ventilation, and machine load. Forklift activity in restricted zones near Machine A requires supervisor review and a maintenance ticket.</textarea></label>
+              <button class="btn primary span-2" type="submit">Upload & Index Document</button>
+            </form>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><div><h3>RAG Search</h3><p>Query semantic memory and cite retrieved chunks.</p></div></div>
+            <form id="ragForm" class="form-grid single">
+              <label>Question / Query<input id="ragQuery" value="overheating machine A forklift restricted zone" /></label>
+              <button class="btn accent" type="submit">Search Semantic Memory</button>
+            </form>
+            <div id="ragResults" class="stack results"></div>
+          </section>
+        </div>
+        <section class="panel"><div class="panel-head"><div><h3>Indexed Documents</h3><p>Operational manuals and evidence corpus.</p></div></div><div id="documentList" class="card-grid"></div></section>
+      </section>
+
+      <section class="view" id="view-agents">
+        <div class="content-grid two-one">
+          <section class="panel">
+            <div class="panel-head"><div><h3>Agent Workflow</h3><p>Observer → Retriever → Investigator → Planner → Guard → Executor</p></div></div>
+            <div class="agent-flow">
+              <div>Observer<span>detects incident candidates</span></div><div>Retriever<span>fetches events + memory</span></div><div>Investigator<span>builds hypotheses</span></div><div>Planner<span>risk and action plan</span></div><div>Guard<span>policy and evidence checks</span></div><div>Executor<span>action engine</span></div>
+            </div>
+          </section>
+          <section class="panel"><div class="panel-head"><div><h3>Run Agent</h3><p>Select any incident and trigger investigation.</p></div></div><div id="agentIncidentPicker" class="stack"></div></section>
+        </div>
+        <section class="panel"><div class="panel-head"><div><h3>Agent Trace Viewer</h3><p>Auditable reasoning steps, evidence, guardrails, and outputs.</p></div></div><div id="agentTraceViewer" class="empty-state">Select “View Agent Runs” from an incident or run a new investigation.</div></section>
+      </section>
+
+      <section class="view" id="view-graph">
+        <section class="panel">
+          <div class="panel-head"><div><h3>Knowledge Graph</h3><p>Neo4j-style operational relationships from incidents, events, machines, zones, and documents.</p></div><button id="reloadGraphBtn" class="btn secondary">Reload Graph</button></div>
+          <div id="graphCanvas" class="graph-canvas"></div>
+        </section>
+        <div class="content-grid two"><section class="panel"><h3>Graph Nodes</h3><div id="graphNodes" class="stack small-stack"></div></section><section class="panel"><h3>Graph Edges</h3><div id="graphEdges" class="stack small-stack"></div></section></div>
+      </section>
+
+      <section class="view" id="view-observability">
+        <div class="kpi-grid" id="observabilityKpis"></div>
+        <div class="content-grid two">
+          <section class="panel"><div class="panel-head"><div><h3>Platform Metrics</h3><p>Prometheus-compatible runtime indicators.</p></div><a class="btn secondary small" href="/metrics" target="_blank">Raw Metrics</a></div><div id="metricBars" class="metric-bars"></div></section>
+          <section class="panel"><div class="panel-head"><div><h3>Deployment Links</h3><p>Local observability stack.</p></div></div><div class="link-grid"><a href="http://localhost:9090" target="_blank">Prometheus</a><a href="http://localhost:3000" target="_blank">Grafana</a><a href="/health" target="_blank">Health</a><a href="architecture.html" target="_blank">Architecture</a></div></section>
+        </div>
+      </section>
+
+      <section class="view" id="view-security">
+        <div class="content-grid two">
+          <section class="panel"><div class="panel-head"><div><h3>RBAC Matrix</h3><p>Enterprise-style role controls.</p></div></div><div id="rbacMatrix"></div></section>
+          <section class="panel"><div class="panel-head"><div><h3>Users</h3><p>Admin-only identity view.</p></div></div><div id="userList" class="stack"></div></section>
+        </div>
+        <section class="panel"><div class="panel-head"><div><h3>Audit Logs</h3><p>All critical actions, agent decisions, and operator changes.</p></div></div><div id="auditLogList" class="timeline"></div></section>
+      </section>
+    </main>
+  </div>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>
