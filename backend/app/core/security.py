@@ -3,12 +3,8 @@ from typing import Iterable
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-import base64
-import hashlib
-import hmac
-import secrets
-
-from jose import JWTError, jwt
+from passlib.context import CryptContext
+import jwt
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -26,31 +22,15 @@ ROLE_RANK = {
 }
 
 
+pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+
 def get_password_hash(password: str) -> str:
-    """Return a PBKDF2-SHA256 password hash.
-
-    This avoids native bcrypt build/runtime issues in minimal demo environments.
-    For production, Argon2id or a managed identity provider is recommended.
-    """
-    iterations = 260_000
-    salt = secrets.token_bytes(16)
-    digest = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, iterations)
-    return 'pbkdf2_sha256${}${}${}'.format(
-        iterations,
-        base64.b64encode(salt).decode('ascii'),
-        base64.b64encode(digest).decode('ascii'),
-    )
-
+    """Return a bcrypt password hash."""
+    return pwd_context.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
-        scheme, iterations, salt_b64, digest_b64 = hashed_password.split('$', 3)
-        if scheme != 'pbkdf2_sha256':
-            return False
-        salt = base64.b64decode(salt_b64)
-        expected = base64.b64decode(digest_b64)
-        actual = hashlib.pbkdf2_hmac('sha256', plain_password.encode('utf-8'), salt, int(iterations))
-        return hmac.compare_digest(actual, expected)
+        return pwd_context.verify(plain_password, hashed_password)
     except Exception:
         return False
 
@@ -83,7 +63,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         email: str | None = payload.get('sub')
         if email is None:
             raise credentials_exception
-    except JWTError as exc:
+    except jwt.InvalidTokenError as exc:
         raise credentials_exception from exc
     user = db.query(User).filter(User.email == email).first()
     if user is None or not user.is_active:
