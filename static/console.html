@@ -7,7 +7,7 @@
   <title>OmniSight Console — Autonomous Multi-Modal Incident Intelligence Fabric</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/app.css" />
 </head>
 <body>
@@ -18,6 +18,41 @@
       <div class="spotlight-input"><span>⌕</span><input id="spotlightInput" placeholder="Command palette: search views, actions, incidents..." /></div>
       <div id="spotlightResults" class="spotlight-results"></div>
       <div class="spotlight-help">Press Enter to run · Esc to close · Ctrl/⌘ K to open</div>
+    </div>
+  </div>
+
+  <!-- Settings Configuration Modal -->
+  <div id="settingsModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>System & UX Configuration</h3>
+        <button class="icon-btn" id="closeSettingsBtn">×</button>
+      </div>
+      <div class="modal-body">
+        <form class="form-grid single" onsubmit="event.preventDefault();">
+          <label>Database & API Mode
+            <select id="settingApiMode">
+              <option value="auto">Auto (Detect Localhost or Fallback to Static Sandbox)</option>
+              <option value="mock">Force Static Sandbox Mode (100% Client-Side Mock)</option>
+              <option value="live">Force Live Backend Mode (FastAPI Endpoint Connection)</option>
+            </select>
+          </label>
+          <label>UX Layout Density
+            <select id="settingDensity">
+              <option value="comfortable">Comfortable (Clean spacings)</option>
+              <option value="compact">Compact (Dense data view)</option>
+            </select>
+          </label>
+          <label>Micro-Animations & Visual Layer
+            <select id="settingAnimations">
+              <option value="on">Enabled (Fluid background particle flows)</option>
+              <option value="off">Disabled (Raw performance mode)</option>
+            </select>
+          </label>
+          <div class="divider"></div>
+          <button class="btn primary wide" id="saveSettingsBtn">Apply Configurations</button>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -82,6 +117,18 @@
     </aside>
 
     <main class="main">
+      <!-- Sandbox/Demo Warning Banner -->
+      <div id="sandboxBanner" class="toast success hidden" style="position:static; width:100%; border-left:0; border-bottom:4px solid var(--green); margin-bottom:20px; border-radius:14px; max-width:none; animation:none; display:flex; justify-content:space-between; align-items:center; padding:12px 20px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span>👁️</span>
+          <div>
+            <b style="color:var(--green); font-size:13px; display:inline;">Static Preview Sandbox</b>
+            <span style="font-size:12px; color:var(--soft); margin-left:8px;">Running purely client-side without local FastAPI backend APIs.</span>
+          </div>
+        </div>
+        <button class="btn small secondary" id="bannerSettingsBtn" style="height:26px; padding:0 8px; font-size:11px;">Configure</button>
+      </div>
+
       <header class="topbar glass">
         <div>
           <div class="eyebrow">OmniSight v1.0 / Production-style MVP</div>
@@ -94,6 +141,7 @@
           <button id="commandBtn" class="btn ghost" title="Ctrl/⌘ + K">⌘K</button>
           <button id="liveBtn" class="btn secondary" title="Toggle live refresh">Live Off</button>
           <button id="themeBtn" class="btn ghost" title="Toggle theme">Theme</button>
+          <button id="settingsBtn" class="btn ghost" title="Settings Manager">⚙ Configuration</button>
           <button id="seedDemoBtn" class="btn accent">Seed Demo</button>
           <button id="refreshBtn" class="btn secondary">Refresh</button>
           <button id="exportBtn" class="btn ghost">Export</button>
@@ -101,6 +149,7 @@
         </div>
       </header>
 
+      <!-- Overview View -->
       <section class="view active" id="view-overview">
         <div class="kpi-grid" id="kpiGrid"></div>
         <div class="content-grid two-one">
@@ -115,7 +164,7 @@
         </div>
         <div class="content-grid two">
           <section class="panel">
-            <div class="panel-head"><div><h3>Architecture Health</h3><p>Service domains mapped to your AMIF architecture.</p></div></div>
+            <div class="panel-head"><div><h3>Architecture Health</h3><p>Service domains mapped to your OmniSight architecture.</p></div></div>
             <div class="health-map" id="healthMap"></div>
           </section>
           <section class="panel">
@@ -125,6 +174,7 @@
         </div>
       </section>
 
+      <!-- Incident Queue View -->
       <section class="view" id="view-incidents">
         <div class="toolbar panel compact">
           <div class="filter-group">
@@ -134,11 +184,22 @@
           <div class="toolbar-actions"><button class="btn secondary" id="clearIncidentFilters">Clear</button></div>
         </div>
         <div class="content-grid master-detail">
-          <section class="panel"><div class="panel-head"><div><h3>Incident Queue</h3><p>Risk-ranked, deduplicated incident stream.</p></div></div><div id="incidentList" class="stack"></div></section>
-          <section class="panel sticky-detail"><div id="incidentDetail" class="empty-state">Select an incident to inspect evidence, agent runs, and actions.</div></section>
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h3>Incident Queue</h3>
+                <p>Risk-ranked, deduplicated incident stream.</p>
+              </div>
+            </div>
+            <div id="incidentList" class="stack"></div>
+          </section>
+          <section class="panel sticky-detail">
+            <div id="incidentDetail" class="empty-state">Select an incident to inspect evidence, agent runs, and actions.</div>
+          </section>
         </div>
       </section>
 
+      <!-- Events View -->
       <section class="view" id="view-events">
         <div class="content-grid two-one">
           <section class="panel">
@@ -156,7 +217,7 @@
               <label>Event Type<input name="event_type" value="manual_observation" /></label>
               <label>Severity<select name="severity"><option>low</option><option>medium</option><option>high</option></select></label>
               <label class="span-2">Payload JSON<textarea name="payload">{"note":"operator observed unusual activity"}</textarea></label>
-              <button class="btn primary span-2" type="submit">Publish Canonical AMIF Event</button>
+              <button class="btn primary span-2" type="submit">Publish Canonical OmniSight Event</button>
             </form>
           </section>
           <section class="panel">
@@ -170,6 +231,7 @@
         </section>
       </section>
 
+      <!-- Documents View -->
       <section class="view" id="view-documents">
         <div class="content-grid two">
           <section class="panel">
@@ -193,27 +255,93 @@
         <section class="panel"><div class="panel-head"><div><h3>Indexed Documents</h3><p>Operational manuals and evidence corpus.</p></div></div><div id="documentList" class="card-grid"></div></section>
       </section>
 
+      <!-- Agents & Simulation View -->
       <section class="view" id="view-agents">
         <div class="content-grid two-one">
           <section class="panel">
-            <div class="panel-head"><div><h3>Agent Workflow</h3><p>Observer → Retriever → Investigator → Planner → Guard → Executor</p></div></div>
-            <div class="agent-flow">
-              <div>Observer<span>detects incident candidates</span></div><div>Retriever<span>fetches events + memory</span></div><div>Investigator<span>builds hypotheses</span></div><div>Planner<span>risk and action plan</span></div><div>Guard<span>policy and evidence checks</span></div><div>Executor<span>action engine</span></div>
+            <div class="panel-head">
+              <div>
+                <h3>Agent Investigation Runtime</h3>
+                <p>Auditable decision loop sequence with live pipeline tracing.</p>
+              </div>
+            </div>
+            
+            <!-- Agent Pipeline Map Visualizer -->
+            <div class="agent-pipeline" id="agentPipeline">
+              <div class="agent-node" data-node="observer">
+                <b>Observer</b>
+                <span>Perceive Signals</span>
+              </div>
+              <div class="agent-node" data-node="retriever">
+                <b>Retriever</b>
+                <span>Load SOP & DB</span>
+              </div>
+              <div class="agent-node" data-node="investigator">
+                <b>Investigator</b>
+                <span>Formulate Hypotheses</span>
+              </div>
+              <div class="agent-node" data-node="planner">
+                <b>Planner</b>
+                <span>Risk & Actions</span>
+              </div>
+              <div class="agent-node" data-node="guard">
+                <b>Guard</b>
+                <span>Safety & Policy</span>
+              </div>
+              <div class="agent-node" data-node="executor">
+                <b>Executor</b>
+                <span>Trigger Mitigation</span>
+              </div>
+            </div>
+            
+            <h4>Pipeline Logs & Traces</h4>
+            <div class="agent-terminal" id="agentTerminal">
+              <div class="log-ln info">[SYSTEM] OmniSight Agent Orchestrator initialized.</div>
+              <div class="log-ln info">[SYSTEM] Ready for event investigation logs...</div>
             </div>
           </section>
-          <section class="panel"><div class="panel-head"><div><h3>Run Agent</h3><p>Select any incident and trigger investigation.</p></div></div><div id="agentIncidentPicker" class="stack"></div></section>
+          
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h3>Run Agent</h3>
+                <p>Select any active incident and trigger investigation.</p>
+              </div>
+            </div>
+            <div id="agentIncidentPicker" class="stack"></div>
+          </section>
         </div>
-        <section class="panel"><div class="panel-head"><div><h3>Agent Trace Viewer</h3><p>Auditable reasoning steps, evidence, guardrails, and outputs.</p></div></div><div id="agentTraceViewer" class="empty-state">Select “View Agent Runs” from an incident or run a new investigation.</div></section>
+        
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h3>Agent Run Logs</h3>
+              <p>Full structured trace outputs of previous agent executions.</p>
+            </div>
+          </div>
+          <div id="agentTraceViewer" class="empty-state">Select “View Agent Runs” from an incident detail page to display trace steps.</div>
+        </section>
       </section>
 
+      <!-- Graph View -->
       <section class="view" id="view-graph">
         <section class="panel">
-          <div class="panel-head"><div><h3>Knowledge Graph</h3><p>Neo4j-style operational relationships from incidents, events, machines, zones, and documents.</p></div><button id="reloadGraphBtn" class="btn secondary">Reload Graph</button></div>
+          <div class="panel-head">
+            <div>
+              <h3>Knowledge Graph</h3>
+              <p>Interactive graph showing relationships between incidents, events, documents, and locations. Hover over nodes to highlight connections.</p>
+            </div>
+            <button id="reloadGraphBtn" class="btn secondary">Reload Graph</button>
+          </div>
           <div id="graphCanvas" class="graph-canvas"></div>
         </section>
-        <div class="content-grid two"><section class="panel"><h3>Graph Nodes</h3><div id="graphNodes" class="stack small-stack"></div></section><section class="panel"><h3>Graph Edges</h3><div id="graphEdges" class="stack small-stack"></div></section></div>
+        <div class="content-grid two">
+          <section class="panel"><h3>Graph Nodes</h3><div id="graphNodes" class="stack small-stack"></div></section>
+          <section class="panel"><h3>Graph Edges</h3><div id="graphEdges" class="stack small-stack"></div></section>
+        </div>
       </section>
 
+      <!-- Observability View -->
       <section class="view" id="view-observability">
         <div class="kpi-grid" id="observabilityKpis"></div>
         <div class="content-grid two">
@@ -222,6 +350,7 @@
         </div>
       </section>
 
+      <!-- Security & Audit View -->
       <section class="view" id="view-security">
         <div class="content-grid two">
           <section class="panel"><div class="panel-head"><div><h3>RBAC Matrix</h3><p>Enterprise-style role controls.</p></div></div><div id="rbacMatrix"></div></section>

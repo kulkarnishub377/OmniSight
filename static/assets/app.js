@@ -1,5 +1,5 @@
-/* AMIF Console — Advanced Vanilla JavaScript SPA
-   Dependency-free, API-backed, animated operator cockpit. */
+/* OmniSight Console — Advanced Vanilla JavaScript SPA
+   Dependency-free, API-backed, animated operator cockpit with static sandbox fallback. */
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -14,8 +14,13 @@ const state = {
   liveTimer: null,
   theme: localStorage.getItem('amif_theme') || 'dark',
   density: localStorage.getItem('amif_density') || 'comfortable',
+  animations: localStorage.getItem('amif_animations') || 'on',
+  apiMode: localStorage.getItem('amif_api_mode') || 'auto',
+  useMocks: false,
   spotlightIndex: 0,
   spotlightItems: [],
+  incidentActiveTabs: {}, // Stores active tab per incident ID
+  playbooks: {}, // Stores playbook checklist state per incident ID
   filters: {
     global: '',
     event: '',
@@ -58,14 +63,12 @@ const serviceHealth = [
   ['Memory Fabric', 'Postgres · Qdrant-ready'],
 ];
 
+// UI Telemetry indicators
 const progressStrip = document.createElement('div');
 progressStrip.className = 'progress-strip done';
 document.body.appendChild(progressStrip);
 
-const style = document.createElement('style');
-style.textContent = `.rowish{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.detail-actions{display:flex;gap:8px;flex-wrap:wrap}.detail-head h3{font-size:24px;margin:10px 0 2px}`;
-document.head.appendChild(style);
-
+// String helpers
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -95,7 +98,7 @@ function empty(text, actionHtml = '') {
 function toast(message, type = 'info') {
   const el = document.createElement('div');
   el.className = `toast ${type}`;
-  el.innerHTML = `<b>${type === 'error' ? 'Error' : type === 'success' ? 'Success' : 'AMIF'}</b><div>${escapeHtml(message)}</div>`;
+  el.innerHTML = `<b>${type === 'error' ? 'Error' : type === 'success' ? 'Success' : 'OmniSight'}</b><div>${escapeHtml(message)}</div>`;
   $('#toastHost').appendChild(el);
   setTimeout(() => el.remove(), 4200);
 }
@@ -105,7 +108,7 @@ function startProgress() {
   progressStrip.style.opacity = '1';
   progressStrip.style.width = '18%';
   setTimeout(() => {
-    if (!progressStrip.classList.contains('done')) progressStrip.style.width = '62%';
+    if (!progressStrip.classList.contains('done')) progressStrip.style.width = '65%';
   }, 120);
 }
 
@@ -124,8 +127,357 @@ function authHeaders(json = true) {
   return headers;
 }
 
+/* ==========================================
+   STATIC PREVIEW SANDBOX (MOCK DB LAYER)
+   ========================================== */
+
+const mockDb = {
+  events: [],
+  incidents: [],
+  alerts: [],
+  documents: [],
+  actions: [],
+  audit: [],
+  users: [],
+  agentRuns: {},
+};
+
+function initMockDb() {
+  const stored = localStorage.getItem('omnisight_mock_db');
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      Object.assign(mockDb, parsed);
+      return;
+    } catch (e) {
+      console.error('Failed parsing mock db, seeding defaults', e);
+    }
+  }
+  seedMockDbDefaults();
+}
+
+function saveMockDb() {
+  localStorage.setItem('omnisight_mock_db', JSON.stringify(mockDb));
+}
+
+function seedMockDbDefaults() {
+  mockDb.users = [
+    { email: 'admin@example.com', role: 'Admin', is_active: true },
+    { email: 'operator@example.com', role: 'Operator', is_active: true },
+  ];
+  
+  mockDb.documents = [
+    { document_id: 'doc_01', file_name: 'machine_a_manual.txt', document_type: 'manual', asset_id: 'machine_a', chunk_count: 5, text: 'Machine A Safety Manual. Operating temperatures must not exceed 85°C. If temp reaches 90°C, shut off engine power and trigger quarantine protocols.' },
+    { document_id: 'doc_02', file_name: 'safety_sop_zones.txt', document_type: 'manual', asset_id: 'global', chunk_count: 3, text: 'Safety SOP. Forklift operations are restricted near critical machinery zones. High-severity alerts require visual operator verification before automatic incident resolution.' },
+  ];
+
+  mockDb.events = [
+    { event_id: 'ev_01', event_type: 'restricted_zone_violation', severity: 'high', source_type: 'camera', source_id: 'camera_zone_a', timestamp: new Date(Date.now() - 3600000 * 2).toISOString(), location: { site: 'plant_1', zone: 'zone_a' }, payload: { object_detected: 'forklift', confidence: 0.94 } },
+    { event_id: 'ev_02', event_type: 'temperature_anomaly', severity: 'high', source_type: 'iot_sensor', source_id: 'temp_machine_a', timestamp: new Date(Date.now() - 3600000 * 1.8).toISOString(), location: { site: 'plant_1', zone: 'zone_a' }, payload: { temperature: 92.4, threshold: 85.0 } },
+    { event_id: 'ev_03', event_type: 'grinding_noise', severity: 'medium', source_type: 'microphone', source_id: 'mic_mach_a', timestamp: new Date(Date.now() - 3600000 * 1.5).toISOString(), location: { site: 'plant_1', zone: 'zone_a' }, payload: { decibels: 92, frequency: 'high_pitch' } },
+    { event_id: 'ev_04', event_type: 'system_boot', severity: 'low', source_type: 'webhook', source_id: 'gateway_01', timestamp: new Date(Date.now() - 3600000 * 4).toISOString(), location: { site: 'plant_1', zone: 'gateway' }, payload: { status: 'healthy' } },
+  ];
+
+  mockDb.incidents = [
+    {
+      incident_id: 'inc_01',
+      title: 'Machine A Overheating & Restricted Zone Intrusion',
+      severity: 'high',
+      status: 'open',
+      summary: 'Automated correlation window linked forklift restricted zone intrusion with a subsequent temperature spike of 92.4°C on Machine A. SOP manual citations advise immediate engine shutdown.',
+      risk_score: 88,
+      risk_indicators: ['restricted_zone_activity', 'temperature_spike_92C', 'abnormal_noise_signature'],
+      related_events: ['ev_01', 'ev_02', 'ev_03'],
+      created_at: new Date(Date.now() - 3600000 * 1.8).toISOString(),
+    }
+  ];
+
+  mockDb.alerts = [
+    { alert_id: 'alt_01', incident_id: 'inc_01', severity: 'high', status: 'open', message: 'Machine A temperature exceeded critical limits (92.4°C)', created_at: new Date(Date.now() - 3600000 * 1.8).toISOString() },
+  ];
+
+  mockDb.actions = [
+    { action_id: 'act_01', incident_id: 'inc_01', action_type: 'quarantine_zone', status: 'resolved', created_at: new Date(Date.now() - 3600000 * 1.7).toISOString(), payload: { output: 'Zone A gates locked, safety strobe lights activated.' } },
+  ];
+
+  mockDb.audit = [
+    { audit_id: 'aud_01', action: 'incident.correlated', actor: 'OmniSight Engine', target_type: 'incident', target_id: 'inc_01', created_at: new Date(Date.now() - 3600000 * 1.8).toISOString() },
+  ];
+  
+  mockDb.agentRuns = {
+    'inc_01': [
+      {
+        run_id: 'run_inc_01_a',
+        status: 'success',
+        created_at: new Date(Date.now() - 3600000 * 1.75).toISOString(),
+        workflow_version: 'v1.2.0-prod',
+        output: { risk_score: 88, decision: 'raise_critical_alert', actions_triggered: ['quarantine_zone'] },
+        trace: {
+          observer: 'Correlated forklift intrusion & temperature spike',
+          retriever: 'SOP file safety_sop_zones.txt loaded successfully',
+          investigator: 'Hypothesized bearing friction due to mechanical hazard',
+          planner: 'Created action ticket act_01 to lock gates',
+          guard: 'Risk score verified. Operation conforms to plant safety parameters.',
+        }
+      }
+    ]
+  };
+
+  saveMockDb();
+}
+
+// Client-side simulated endpoint routers
+function handleMockApi(path, options) {
+  const method = options.method || 'GET';
+  
+  if (path.startsWith('/api/auth/login')) {
+    const params = new URLSearchParams(options.body);
+    const email = params.get('username') || 'admin@example.com';
+    return { access_token: 'mock_jwt_token', email, role: 'Admin' };
+  }
+  
+  if (path.startsWith('/api/system/stats')) {
+    return {
+      events: mockDb.events.length,
+      incidents: mockDb.incidents.length,
+      alerts: mockDb.alerts.length,
+      documents: mockDb.documents.length,
+      agent_runs: Object.values(mockDb.agentRuns).flat().length,
+      topics: ['raw.events', 'alerts.v1', 'incidents.correlated'],
+    };
+  }
+
+  if (path.startsWith('/api/events')) {
+    if (method === 'POST') {
+      const body = JSON.parse(options.body);
+      const newEvent = {
+        event_id: 'ev_' + Math.random().toString(36).substr(2, 5),
+        timestamp: new Date().toISOString(),
+        ...body,
+      };
+      mockDb.events.unshift(newEvent);
+      
+      // Auto-correlate temp spikes or forklift detections into incidents
+      if (newEvent.event_type === 'temperature_anomaly' || newEvent.event_type === 'restricted_zone_violation') {
+        const matchingInc = mockDb.incidents.find(i => i.status === 'open');
+        if (matchingInc) {
+          matchingInc.related_events.push(newEvent.event_id);
+          matchingInc.risk_score = Math.min(100, matchingInc.risk_score + 10);
+        } else {
+          const newIncId = 'inc_' + Math.random().toString(36).substr(2, 5);
+          mockDb.incidents.unshift({
+            incident_id: newIncId,
+            title: newEvent.event_type === 'temperature_anomaly' ? 'Anomaly: Machine Heat Warning' : 'Anomaly: Restricted Area Intrusion',
+            severity: 'high',
+            status: 'open',
+            summary: `Automated detection generated incident due to event: ${newEvent.event_type}. Ready for investigation.`,
+            risk_score: 70,
+            risk_indicators: [newEvent.event_type],
+            related_events: [newEvent.event_type],
+            created_at: new Date().toISOString(),
+          });
+          
+          mockDb.alerts.unshift({
+            alert_id: 'alt_' + Math.random().toString(36).substr(2, 5),
+            incident_id: newIncId,
+            severity: 'high',
+            status: 'open',
+            message: `Critical event ${newEvent.event_type} registered`,
+            created_at: new Date().toISOString(),
+          });
+        }
+      }
+      
+      saveMockDb();
+      return newEvent;
+    }
+    return mockDb.events;
+  }
+
+  if (path.startsWith('/api/incidents/')) {
+    const parts = path.split('/');
+    const incidentId = parts[3];
+    const incident = mockDb.incidents.find(i => i.incident_id === incidentId);
+    
+    if (parts[4] === 'investigate') {
+      const run = {
+        run_id: 'run_' + Math.random().toString(36).substr(2, 7),
+        status: 'success',
+        created_at: new Date().toISOString(),
+        workflow_version: 'v1.2.0-prod',
+        output: { risk_score: incident ? incident.risk_score + 2 : 75, decision: 'action_governed', actions_triggered: ['mitigate_alert'] },
+        trace: {
+          observer: 'Signal anomalies confirmed.',
+          retriever: 'SOP index loaded correctly.',
+          investigator: 'Root cause confirmed from manual procedures.',
+          planner: 'Mitigation checklist generated.',
+          guard: 'Rules passed policy.',
+        }
+      };
+      if (!mockDb.agentRuns[incidentId]) mockDb.agentRuns[incidentId] = [];
+      mockDb.agentRuns[incidentId].unshift(run);
+      
+      if (incident) {
+        incident.summary = 'Investigation complete. Machine A manual SOP indicates critical parameter threshold (90°C) was breached. Recommended action: verify manual shutdown checklist and coordinate with operators in Zone A.';
+        incident.risk_indicators.push('sop_matched');
+      }
+      
+      mockDb.audit.unshift({
+        audit_id: 'aud_' + Math.random().toString(36).substr(2, 5),
+        action: 'agent.investigation',
+        actor: 'OmniSight Agent Orchestrator',
+        target_type: 'incident',
+        target_id: incidentId,
+        created_at: new Date().toISOString(),
+      });
+      
+      saveMockDb();
+      return { status: 'success', run };
+    }
+    
+    if (parts[4] === 'agent-runs') {
+      return mockDb.agentRuns[incidentId] || [];
+    }
+
+    if (method === 'PATCH') {
+      const body = JSON.parse(options.body);
+      if (incident) {
+        Object.assign(incident, body);
+        mockDb.audit.unshift({
+          audit_id: 'aud_' + Math.random().toString(36).substr(2, 5),
+          action: `incident.${body.status}`,
+          actor: 'admin@example.com',
+          target_type: 'incident',
+          target_id: incidentId,
+          created_at: new Date().toISOString(),
+        });
+        saveMockDb();
+      }
+      return incident;
+    }
+  }
+
+  if (path.startsWith('/api/incidents')) {
+    return mockDb.incidents;
+  }
+
+  if (path.startsWith('/api/alerts/')) {
+    const parts = path.split('/');
+    const alertId = parts[3];
+    const alert = mockDb.alerts.find(a => a.alert_id === alertId);
+    if (parts[4] === 'acknowledge') {
+      if (alert) {
+        alert.status = 'acknowledged';
+        alert.acknowledged_by = 'admin@example.com';
+        saveMockDb();
+      }
+      return alert;
+    }
+  }
+
+  if (path.startsWith('/api/alerts')) {
+    return mockDb.alerts;
+  }
+
+  if (path.startsWith('/api/documents/upload')) {
+    const text = options.body.get('file');
+    const name = options.body.get('file_name') || 'uploaded_doc.txt';
+    const asset = options.body.get('asset_id') || 'global';
+    const newDoc = {
+      document_id: 'doc_' + Math.random().toString(36).substr(2, 5),
+      file_name: name,
+      document_type: 'manual',
+      asset_id: asset,
+      chunk_count: 1,
+      text: 'Custom Uploaded Document Content. Active operator supervision mandated.',
+    };
+    mockDb.documents.unshift(newDoc);
+    saveMockDb();
+    return newDoc;
+  }
+
+  if (path.startsWith('/api/documents')) {
+    return mockDb.documents;
+  }
+
+  if (path.startsWith('/api/actions')) {
+    return mockDb.actions;
+  }
+
+  if (path.startsWith('/api/knowledge/graph')) {
+    const nodes = [];
+    const edges = [];
+    
+    mockDb.incidents.forEach(inc => {
+      nodes.push({ id: inc.incident_id, label: inc.title, type: 'Incident' });
+      inc.related_events.forEach(evId => {
+        edges.push({ source: inc.incident_id, target: evId, relation: 'CORRELATED_WITH' });
+      });
+    });
+    
+    mockDb.events.forEach(ev => {
+      nodes.push({ id: ev.event_id, label: ev.event_type, type: 'Event' });
+      nodes.push({ id: ev.source_id, label: ev.source_id, type: 'Machine' });
+      edges.push({ source: ev.event_id, target: ev.source_id, relation: 'EMITTED_BY' });
+    });
+
+    return { nodes, edges };
+  }
+
+  if (path.startsWith('/api/search/query')) {
+    const body = JSON.parse(options.body);
+    const query = body.query.toLowerCase();
+    const hits = [];
+    mockDb.documents.forEach(doc => {
+      if (doc.text.toLowerCase().includes(query) || doc.file_name.toLowerCase().includes(query)) {
+        hits.push({
+          document_id: doc.document_id,
+          chunk_id: 'chunk_01',
+          score: 0.95,
+          text: doc.text,
+          metadata: { file_name: doc.file_name, asset_id: doc.asset_id },
+        });
+      }
+    });
+    return { hits };
+  }
+
+  if (path.startsWith('/api/demo/seed')) {
+    seedMockDbDefaults();
+    return { status: 'seeded' };
+  }
+
+  if (path.startsWith('/api/audit/logs')) {
+    return mockDb.audit;
+  }
+
+  if (path.startsWith('/api/users')) {
+    return mockDb.users;
+  }
+
+  return null;
+}
+
+/* ==========================================
+   DYNAMIC API UTILITY INTERCEPTOR
+   ========================================== */
+
 async function api(path, options = {}) {
   startProgress();
+  
+  if (state.useMocks) {
+    // Simulate minor visual network latency for aesthetics
+    await new Promise(r => setTimeout(r, 450));
+    try {
+      const res = handleMockApi(path, options);
+      finishProgress(false);
+      return res;
+    } catch (e) {
+      finishProgress(true);
+      throw e;
+    }
+  }
+
   try {
     const response = await fetch(path, options);
     const text = await response.text();
@@ -148,15 +500,22 @@ async function api(path, options = {}) {
   }
 }
 
+/* ==========================================
+   VISUAL & THEME CUSTOMIZERS
+   ========================================== */
+
 function applyTheme() {
   document.body.classList.toggle('light', state.theme === 'light');
   document.body.classList.toggle('compact', state.density === 'compact');
+  
+  const sheenEnabled = (state.animations === 'on');
+  document.body.style.setProperty('--sheen-opacity', sheenEnabled ? '1' : '0');
 }
 
 function showAppAuthed() {
   $('#authScreen').classList.toggle('hidden', Boolean(state.token));
   $('#appShell').classList.toggle('hidden', !state.token);
-  $('#sidebarUser').innerHTML = state.email ? `<b>${escapeHtml(state.email)}</b><br><span>${escapeHtml(state.role)}</span>` : '';
+  $('#sidebarUser').innerHTML = state.email ? `<b>${escapeHtml(state.email)}</b><br><span class="muted">${escapeHtml(state.role)}</span>` : '';
 }
 
 async function login(email, password) {
@@ -211,7 +570,7 @@ async function refreshAll({ quiet = false } = {}) {
     Object.assign(state.data, { events, incidents, alerts, documents, stats, actions, graph });
     await loadAdminData();
     renderCurrent();
-    if (!quiet) toast('Dashboard refreshed', 'success');
+    if (!quiet) toast('Dashboard metrics updated', 'success');
   } catch (error) {
     toast(error.message, 'error');
   }
@@ -237,6 +596,10 @@ function setView(view) {
   $$('.view').forEach(section => section.classList.toggle('active', section.id === `view-${view}`));
   $('#pageTitle').textContent = pageTitles[view] || view;
   renderCurrent();
+  
+  if (view === 'graph') {
+    setTimeout(initInteractiveGraph, 50);
+  }
 }
 
 function renderCurrent() {
@@ -259,11 +622,11 @@ function renderShared() {
   const openIncidents = state.data.incidents.filter(item => item.status === 'open').length;
   const openAlerts = state.data.alerts.filter(item => item.status === 'open').length;
   const kpis = [
-    ['Events', stats.events, 'normalized operational signals', 'rgba(103,232,249,.14)'],
-    ['Incidents', stats.incidents, `${openIncidents} currently open`, 'rgba(251,113,133,.14)'],
-    ['Alerts', stats.alerts, `${openAlerts} awaiting acknowledgement`, 'rgba(251,191,36,.14)'],
-    ['Documents', stats.documents, 'semantic memory corpus', 'rgba(52,211,153,.14)'],
-    ['Agent Runs', stats.agent_runs, 'auditable investigations', 'rgba(167,139,250,.16)'],
+    ['Events', stats.events, 'normalized signals', 'rgba(103,232,249,.14)'],
+    ['Incidents', stats.incidents, `${openIncidents} open alert desks`, 'rgba(251,113,133,.14)'],
+    ['Alerts', stats.alerts, `${openAlerts} verified critical`, 'rgba(251,191,36,.14)'],
+    ['Documents', stats.documents, 'semantic chunks', 'rgba(52,211,153,.14)'],
+    ['Agent Runs', stats.agent_runs, 'automated checks', 'rgba(167,139,250,.16)'],
   ];
   const html = kpis.map(([label, value, sub, glow]) => `
     <div class="kpi" style="--glow:${glow}">
@@ -310,9 +673,9 @@ function renderInsights() {
   node.id = 'insightGrid';
   node.className = 'insight-grid';
   node.innerHTML = `
-    <div class="insight-card"><b>Incident Pressure</b><p>Open incidents compared with alert load.</p><div class="spark-wrap"><canvas data-spark="incidents"></canvas></div></div>
-    <div class="insight-card"><b>Multimodal Coverage</b><p>Vision, audio, sensor, document event distribution.</p><div class="spark-wrap"><canvas data-spark="events"></canvas></div></div>
-    <div class="insight-card"><b>Agent Throughput</b><p>Investigation and governance activity.</p><div class="spark-wrap"><canvas data-spark="agents"></canvas></div></div>`;
+    <div class="insight-card reveal"><b>Incident Pressure</b><p>Active warnings / open alert status load.</p><div class="spark-wrap"><canvas data-spark="incidents"></canvas></div></div>
+    <div class="insight-card reveal"><b>Multimodal Coverage</b><p>Vision, IoT sensors, sound signal distribution.</p><div class="spark-wrap"><canvas data-spark="events"></canvas></div></div>
+    <div class="insight-card reveal"><b>Agent Operations</b><p>Daily audits & RAG pipeline runs.</p><div class="spark-wrap"><canvas data-spark="agents"></canvas></div></div>`;
   grid.insertAdjacentElement('afterend', node);
 }
 
@@ -337,26 +700,61 @@ function drawSparklines() {
     const w = rect.width;
     const h = rect.height;
     ctx.clearRect(0, 0, w, h);
+    
+    // Draw Grid Lines (Premium UX touch)
+    ctx.strokeStyle = state.theme === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.03)';
+    ctx.lineWidth = 1;
+    for(let y=10; y<h; y+=20) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+    
     const grad = ctx.createLinearGradient(0, 0, w, 0);
     grad.addColorStop(0, '#67e8f9');
     grad.addColorStop(1, '#a78bfa');
+    
     ctx.strokeStyle = grad;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    
     ctx.beginPath();
-    data.forEach((value, index) => {
+    const points = data.map((value, index) => {
       const x = (index / (data.length - 1 || 1)) * w;
-      const y = h - (value / max) * (h - 12) - 6;
-      if (index === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+      const y = h - (value / max) * (h - 16) - 8;
+      return { x, y };
     });
+    
+    points.forEach((p, idx) => {
+      if (idx === 0) ctx.moveTo(p.x, p.y);
+      else {
+        // Smooth curve interpolation
+        const prev = points[idx - 1];
+        const cx = (prev.x + p.x) / 2;
+        ctx.quadraticCurveTo(prev.x, prev.y, cx, (prev.y + p.y) / 2);
+      }
+    });
+    ctx.lineTo(w, points[points.length - 1].y);
     ctx.stroke();
+    
+    // Fill background area under curve
     ctx.lineTo(w, h);
     ctx.lineTo(0, h);
     ctx.closePath();
-    ctx.fillStyle = 'rgba(103,232,249,.08)';
+    ctx.fillStyle = state.theme === 'light' ? 'rgba(103,232,249,.04)' : 'rgba(103,232,249,.06)';
     ctx.fill();
+    
+    // Draw interactive glowing node markers
+    points.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#67e8f9';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 7, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(103,232,249,0.3)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
   });
 }
 
@@ -376,11 +774,12 @@ function filteredEvents() {
 }
 
 function incidentCard(incident, compact = false) {
-  return `<article class="item-card incident-card" data-incident-id="${escapeHtml(incident.incident_id)}">
+  const activeClass = state.selectedIncidentId === incident.incident_id ? 'active-card' : '';
+  return `<article class="item-card incident-card ${activeClass}" data-incident-id="${escapeHtml(incident.incident_id)}">
     <div class="rowish"><span>${pill(incident.severity)} ${pill(incident.status)}</span><span class="muted mono">${shortId(incident.incident_id)}</span></div>
     <h4>${escapeHtml(incident.title)}</h4>
-    <p>${escapeHtml(compact ? (incident.summary || 'Awaiting agent summary').slice(0, 150) : (incident.summary || 'No investigation summary yet.'))}</p>
-    <div class="rowish"><span class="muted">Risk ${incident.risk_score ?? 'n/a'} · ${incident.related_events?.length || 0} events</span><button class="btn small secondary" data-open-incident="${escapeHtml(incident.incident_id)}">Inspect</button></div>
+    <p>${escapeHtml(compact ? (incident.summary || 'Awaiting agent summary').slice(0, 120) + '...' : (incident.summary || 'No investigation summary yet.'))}</p>
+    <div class="rowish" style="margin-top: 10px;"><span class="muted">Risk Score: <b>${incident.risk_score ?? 'n/a'}</b> · ${incident.related_events?.length || 0} signals</span><button class="btn small secondary" data-open-incident="${escapeHtml(incident.incident_id)}">Inspect</button></div>
   </article>`;
 }
 
@@ -388,7 +787,7 @@ function alertCard(alert) {
   const action = alert.status === 'open'
     ? `<button class="btn small primary" data-ack-alert="${escapeHtml(alert.alert_id)}">Acknowledge</button>`
     : `<span class="muted">Ack by ${escapeHtml(alert.acknowledged_by || 'operator')}</span>`;
-  return `<article class="item-card">${pill(alert.severity)} ${pill(alert.status)}<h4>${escapeHtml(alert.message)}</h4><p class="mono muted">${shortId(alert.alert_id)} · ${fmtDate(alert.created_at)}</p><div>${action}</div></article>`;
+  return `<article class="item-card">${pill(alert.severity)} ${pill(alert.status)}<h4>${escapeHtml(alert.message)}</h4><p class="mono muted">${shortId(alert.alert_id)} · ${fmtDate(alert.created_at)}</p><div style="margin-top:10px;">${action}</div></article>`;
 }
 
 function timelineItem(title, sub, severity = '') {
@@ -396,18 +795,22 @@ function timelineItem(title, sub, severity = '') {
 }
 
 function renderOverview() {
-  $('#overviewIncidents').innerHTML = state.data.incidents.slice(0, 5).map(item => incidentCard(item, true)).join('') || empty('No incidents yet. Seed demo to create one.', '<button class="btn primary" data-seed-inline>Seed Demo</button>');
-  $('#overviewAlerts').innerHTML = state.data.alerts.slice(0, 5).map(alertCard).join('') || empty('No alerts yet.');
-  $('#overviewTimeline').innerHTML = state.data.events.slice(0, 9).map(item => timelineItem(item.event_type, `${item.source_id} · ${fmtDate(item.timestamp)}`, item.severity)).join('') || empty('No events yet.');
+  $('#overviewIncidents').innerHTML = state.data.incidents.slice(0, 5).map(item => incidentCard(item, true)).join('') || empty('No incidents logged yet. Seed demo to generate warning incidents.', '<button class="btn primary" data-seed-inline>Seed Demo</button>');
+  $('#overviewAlerts').innerHTML = state.data.alerts.slice(0, 5).map(alertCard).join('') || empty('No active alerts.');
+  $('#overviewTimeline').innerHTML = state.data.events.slice(0, 8).map(item => timelineItem(item.event_type, `${item.source_id} · ${fmtDate(item.timestamp)}`, item.severity)).join('') || empty('No events loaded.');
   $('#healthMap').innerHTML = serviceHealth.map(([name, desc]) => `<div class="health-card"><b>${name}</b><p>${desc}</p></div>`).join('');
 }
 
 function renderIncidentsPage() {
   const list = filteredIncidents();
-  $('#incidentList').innerHTML = list.map(item => incidentCard(item)).join('') || empty('No matching incidents.');
+  $('#incidentList').innerHTML = list.map(item => incidentCard(item)).join('') || empty('No matching incidents found.');
   if (!state.selectedIncidentId && list[0]) state.selectedIncidentId = list[0].incident_id;
   renderIncidentDetail(state.selectedIncidentId);
 }
+
+/* ==========================================
+   WAR ROOM INCIDENT COMMAND DETAIL DESK
+   ========================================== */
 
 function renderIncidentDetail(id) {
   const el = $('#incidentDetail');
@@ -416,25 +819,127 @@ function renderIncidentDetail(id) {
     el.innerHTML = empty('Select an incident to inspect evidence, agent runs, and actions.');
     return;
   }
+  
+  // Set default tab if not set
+  if (!state.incidentActiveTabs[id]) {
+    state.incidentActiveTabs[id] = 'dossier';
+  }
+  
+  const currentTab = state.incidentActiveTabs[id];
   const related = state.data.events.filter(event => incident.related_events?.includes(event.event_id));
   const actions = state.data.actions.filter(action => action.incident_id === incident.incident_id);
-  el.innerHTML = `<div class="detail-head">
-      <div>${pill(incident.severity)} ${pill(incident.status)}<h3>${escapeHtml(incident.title)}</h3><p class="mono muted">${escapeHtml(incident.incident_id)}</p></div>
+  
+  // Build Playbook check status
+  if (!state.playbooks[id]) {
+    state.playbooks[id] = [
+      { text: 'Verify CCTV feed for forklift registration ID', done: false },
+      { text: 'Confirm temperature reading calibration parameters', done: false },
+      { text: 'Quarantine Machine A operations in SCADA controller', done: false },
+      { text: 'Log safety ticket with Zone A supervisor', done: false },
+    ];
+  }
+  
+  // High/Medium/Low Gauge classes
+  const riskVal = incident.risk_score || 50;
+  const lowClass = riskVal > 0 ? 'filled-low' : '';
+  const medClass = riskVal > 40 ? 'filled-med' : '';
+  const highClass = riskVal > 75 ? 'filled-high' : '';
+
+  el.innerHTML = `
+    <div class="detail-head">
+      <div class="rowish">
+        <span>${pill(incident.severity)} ${pill(incident.status)}</span>
+        <span class="muted mono">${escapeHtml(incident.incident_id)}</span>
+      </div>
+      <h3 style="margin: 12px 0 6px 0; font-size:22px; font-weight:800;">${escapeHtml(incident.title)}</h3>
+      <p class="muted" style="margin: 0 0 16px 0;">Logged: ${fmtDate(incident.created_at)}</p>
     </div>
-    <div class="detail-actions">
-      <button class="btn primary" data-run-agent="${escapeHtml(incident.incident_id)}">Run Investigation</button>
-      <button class="btn secondary" data-status="acknowledged" data-incident-status="${escapeHtml(incident.incident_id)}">Acknowledge</button>
-      <button class="btn secondary" data-status="resolved" data-incident-status="${escapeHtml(incident.incident_id)}">Resolve</button>
-      <button class="btn ghost" data-view-runs="${escapeHtml(incident.incident_id)}">View Agent Runs</button>
+    
+    <div class="detail-actions" style="margin-bottom: 20px;">
+      <button class="btn primary small" data-run-agent="${escapeHtml(incident.incident_id)}">⚡ Run Agent Investigation</button>
+      <button class="btn secondary small" data-status="acknowledged" data-incident-status="${escapeHtml(incident.incident_id)}">✓ Acknowledge</button>
+      <button class="btn secondary small" data-status="resolved" data-incident-status="${escapeHtml(incident.incident_id)}">✓ Resolve</button>
+      <button class="btn ghost small" data-view-runs="${escapeHtml(incident.incident_id)}">🔍 Trace Agent Runs</button>
     </div>
-    <div class="divider"></div>
-    <h4>AI Summary</h4><p>${escapeHtml(incident.summary || 'No summary yet. Run investigation to generate evidence-backed analysis.')}</p>
-    <div class="divider"></div>
-    <h4>Risk Indicators</h4><div>${(incident.risk_indicators || []).map(pill).join(' ') || '<span class="muted">None</span>'}</div>
-    <div class="divider"></div>
-    <h4>Related Events</h4><div class="stack">${related.map(event => `<div class="item-card"><b>${escapeHtml(event.event_type)}</b><p class="muted">${escapeHtml(event.source_id)} · ${fmtDate(event.timestamp)}</p>${jsonBlock({ location: event.location, payload: event.payload })}</div>`).join('') || '<p class="muted">No related events loaded.</p>'}</div>
-    <div class="divider"></div>
-    <h4>Action Results</h4><div class="stack">${actions.map(action => `<div class="item-card"><b>${escapeHtml(action.action_type)}</b> ${pill(action.status)}<p class="muted">${fmtDate(action.created_at)}</p>${jsonBlock(action.payload)}</div>`).join('') || '<p class="muted">No action results.</p>'}</div>`;
+    
+    <div class="detail-tabs">
+      <button class="tab-btn ${currentTab === 'dossier' ? 'active' : ''}" data-tab-select="dossier" data-inc-id="${id}">Dossier</button>
+      <button class="tab-btn ${currentTab === 'evidence' ? 'active' : ''}" data-tab-select="evidence" data-inc-id="${id}">Evidence (${related.length})</button>
+      <button class="tab-btn ${currentTab === 'playbook' ? 'active' : ''}" data-tab-select="playbook" data-inc-id="${id}">Playbook & Mitigation</button>
+    </div>
+    
+    <!-- Tab 1: Dossier -->
+    <div class="tab-content ${currentTab === 'dossier' ? 'active' : ''}">
+      <h4>Threat Threat Assessment</h4>
+      <div class="threat-scale">
+        <div class="threat-bar ${lowClass}"></div>
+        <div class="threat-bar ${medClass}"></div>
+        <div class="threat-bar ${highClass}"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--muted); margin-top:4px;">
+        <span>Low Risk</span>
+        <span>Medium Threat</span>
+        <span style="font-weight:700; color:var(--red);">Threat Level ${riskVal}%</span>
+      </div>
+
+      <div class="divider"></div>
+      <h4>AI Evidence Synthesis</h4>
+      <p style="font-size:14px; line-height:1.6; color:var(--soft);">${escapeHtml(incident.summary || 'No investigation summary generated yet. Press "Run Agent Investigation" to trigger LLM summary synthesis.')}</p>
+      
+      <div class="divider"></div>
+      <h4>Risk Indicators</h4>
+      <div style="display:flex; flex-wrap:wrap; gap:8px;">
+        ${(incident.risk_indicators || []).map(pill).join(' ') || '<span class="muted">None matched</span>'}
+      </div>
+    </div>
+    
+    <!-- Tab 2: Evidence Timeline -->
+    <div class="tab-content ${currentTab === 'evidence' ? 'active' : ''}">
+      <h4>Related Event Logs</h4>
+      <div class="stack" style="margin-top:12px;">
+        ${related.map(event => `
+          <div class="item-card">
+            <div class="rowish">
+              <b>${escapeHtml(event.event_type)}</b>
+              <span>${pill(event.severity)}</span>
+            </div>
+            <p class="muted">${escapeHtml(event.source_id)} · ${fmtDate(event.timestamp)}</p>
+            ${jsonBlock({ location: event.location, payload: event.payload })}
+          </div>
+        `).join('') || '<p class="muted">No raw events matched to this incident yet.</p>'}
+      </div>
+    </div>
+    
+    <!-- Tab 3: Playbook & Mitigation -->
+    <div class="tab-content ${currentTab === 'playbook' ? 'active' : ''}">
+      <h4>Mitigation Playbook Checklist</h4>
+      <p class="muted">CTO mandated manual SOP safety verification checklist:</p>
+      
+      <div class="playbook-list">
+        ${state.playbooks[id].map((item, idx) => `
+          <div class="playbook-item ${item.done ? 'checked' : ''}" data-playbook-check="${idx}" data-inc-id="${id}">
+            <input type="checkbox" ${item.done ? 'checked' : ''} />
+            <span>${escapeHtml(item.text)}</span>
+          </div>
+        `).join('')}
+      </div>
+      
+      <div class="divider"></div>
+      <h4>Action Logs</h4>
+      <div class="stack">
+        ${actions.map(action => `
+          <div class="item-card">
+            <div class="rowish">
+              <b>${escapeHtml(action.action_type)}</b> 
+              ${pill(action.status)}
+            </div>
+            <p class="muted">${fmtDate(action.created_at)}</p>
+            ${jsonBlock(action.payload)}
+          </div>
+        `).join('') || '<p class="muted">No mitigations executed yet.</p>'}
+      </div>
+    </div>
+  `;
 }
 
 function renderEventsPage() {
@@ -448,21 +953,21 @@ function renderEventsPage() {
     <td>${fmtDate(event.timestamp)}</td>
     <td><pre>${escapeHtml(JSON.stringify(event.payload, null, 2))}</pre></td>
   </tr>`).join('');
-  $('#eventTable').innerHTML = rows || `<tr><td colspan="6">No events found.</td></tr>`;
+  $('#eventTable').innerHTML = rows || `<tr><td colspan="6">No events found matching current query.</td></tr>`;
 }
 
 function renderDocumentsPage() {
-  $('#documentList').innerHTML = state.data.documents.map(doc => `<article class="item-card"><span class="badge">${escapeHtml(doc.document_type)}</span><h4>${escapeHtml(doc.file_name)}</h4><p>Asset: ${escapeHtml(doc.asset_id || 'global')} · ${doc.chunk_count} chunks</p><p class="mono muted">${shortId(doc.document_id)}</p></article>`).join('') || empty('No documents indexed yet.');
+  $('#documentList').innerHTML = state.data.documents.map(doc => `<article class="item-card"><span class="badge">${escapeHtml(doc.document_type)}</span><h4>${escapeHtml(doc.file_name)}</h4><p>Asset ID: ${escapeHtml(doc.asset_id || 'global')} · ${doc.chunk_count} chunks</p><p class="mono muted">${shortId(doc.document_id)}</p></article>`).join('') || empty('No documents uploaded.');
 }
 
 function renderAgentsPage() {
-  $('#agentIncidentPicker').innerHTML = state.data.incidents.map(incident => `<div class="item-card"><b>${escapeHtml(incident.title)}</b><p class="muted">${shortId(incident.incident_id)} · risk ${incident.risk_score ?? 'n/a'}</p><button class="btn small primary" data-run-agent="${escapeHtml(incident.incident_id)}">Run Investigation</button> <button class="btn small secondary" data-view-runs="${escapeHtml(incident.incident_id)}">View Runs</button></div>`).join('') || empty('No incidents available.');
+  $('#agentIncidentPicker').innerHTML = state.data.incidents.map(incident => `<div class="item-card"><b>${escapeHtml(incident.title)}</b><p class="muted">${shortId(incident.incident_id)} · risk ${incident.risk_score ?? 'n/a'}</p><button class="btn small primary" data-run-agent="${escapeHtml(incident.incident_id)}">⚡ Investigate</button> <button class="btn small secondary" data-view-runs="${escapeHtml(incident.incident_id)}">Trace Runs</button></div>`).join('') || empty('No incidents loaded.');
 }
 
 async function showAgentRuns(incidentId) {
   try {
     const runs = await api(`/api/incidents/${incidentId}/agent-runs`, { headers: authHeaders(false) });
-    $('#agentTraceViewer').innerHTML = runs.map(run => `<article class="item-card"><div class="rowish"><b>Run ${shortId(run.run_id)}</b>${pill(run.status)}</div><p class="muted">${fmtDate(run.created_at)} · workflow ${escapeHtml(run.workflow_version)}</p><h4>Output</h4>${jsonBlock(run.output)}<h4>Trace</h4>${jsonBlock(run.trace)}</article>`).join('') || empty('No agent runs for this incident yet.');
+    $('#agentTraceViewer').innerHTML = runs.map(run => `<article class="item-card"><div class="rowish"><b>Run ${shortId(run.run_id)}</b>${pill(run.status)}</div><p class="muted">${fmtDate(run.created_at)} · workflow ${escapeHtml(run.workflow_version)}</p><h4>Output</h4>${jsonBlock(run.output)}<h4>Trace</h4>${jsonBlock(run.trace)}</article>`).join('') || empty('No agent traces found.');
     setView('agents');
   } catch (error) {
     toast(error.message, 'error');
@@ -471,49 +976,119 @@ async function showAgentRuns(incidentId) {
 
 function renderGraphPage() {
   const { nodes = [], edges = [] } = state.data.graph || {};
-  $('#graphNodes').innerHTML = nodes.map(node => `<div class="item-card"><b>${escapeHtml(node.label)}</b> ${pill(node.type)}<p class="mono muted">${escapeHtml(node.id)}</p></div>`).join('') || empty('No graph nodes yet.');
-  $('#graphEdges').innerHTML = edges.map(edge => `<div class="item-card"><b>${escapeHtml(edge.relation)}</b><p class="mono muted">${shortId(edge.source)} → ${shortId(edge.target)}</p></div>`).join('') || empty('No graph edges yet.');
+  $('#graphNodes').innerHTML = nodes.map(node => `<div class="item-card"><b>${escapeHtml(node.label)}</b> ${pill(node.type)}<p class="mono muted">${escapeHtml(node.id)}</p></div>`).join('') || empty('No nodes indexed.');
+  $('#graphEdges').innerHTML = edges.map(edge => `<div class="item-card"><b>${escapeHtml(edge.relation)}</b><p class="mono muted">${shortId(edge.source)} → ${shortId(edge.target)}</p></div>`).join('') || empty('No graph connections.');
   $('#graphCanvas').innerHTML = renderGraphSvg(nodes, edges);
 }
 
+/* ==========================================
+   INTERACTIVE SVG KNOWLEDGE GRAPH WITH DRAG & HOVER
+   ========================================== */
+
 function renderGraphSvg(nodes, edges) {
-  if (!nodes.length) return empty('No graph data yet. Seed the demo first.');
+  if (!nodes.length) return empty('No graph data found. Load elements or seed the demo scenario.');
   const w = 1100;
   const h = 540;
   const cx = w / 2;
   const cy = h / 2;
-  const r = Math.min(w, h) * 0.36;
+  const r = Math.min(w, h) * 0.32;
+  
   const pos = {};
   nodes.forEach((node, index) => {
     const angle = (Math.PI * 2 * index) / nodes.length - Math.PI / 2;
-    const jitter = (index % 3) * 14;
+    const jitter = (index % 3) * 12;
     pos[node.id] = { x: cx + Math.cos(angle) * (r + jitter), y: cy + Math.sin(angle) * (r + jitter) };
   });
+  
   const color = type => ({ Incident: '#fb7185', Event: '#67e8f9', Machine: '#34d399', Zone: '#fbbf24', Document: '#a78bfa' }[type] || '#cbd5e1');
+  
   const edgeSvg = edges.map(edge => {
     const a = pos[edge.source];
     const b = pos[edge.target];
     if (!a || !b) return '';
     const mx = (a.x + b.x) / 2;
     const my = (a.y + b.y) / 2;
-    return `<g><line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#33415f" stroke-width="1.5" marker-end="url(#arrow)"/><text class="edge-label" x="${mx}" y="${my}">${escapeHtml(edge.relation)}</text></g>`;
+    return `<g class="graph-edge" data-source="${edge.source}" data-target="${edge.target}"><line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#334155" stroke-width="1.8" marker-end="url(#arrow)"/><text class="edge-label" x="${mx}" y="${my}">${escapeHtml(edge.relation)}</text></g>`;
   }).join('');
+  
   const nodeSvg = nodes.map((node, index) => {
     const p = pos[node.id];
     const c = color(node.type);
-    return `<g data-node-id="${escapeHtml(node.id)}" class="graph-node" style="animation:fadeUp .35s ease ${index * 25}ms both"><circle cx="${p.x}" cy="${p.y}" r="20" fill="${c}" opacity=".92"/><circle cx="${p.x}" cy="${p.y}" r="34" fill="${c}" opacity=".12"/><text class="node-label" x="${p.x + 28}" y="${p.y + 4}">${escapeHtml(String(node.label).slice(0, 30))}</text></g>`;
+    return `<g data-node-id="${escapeHtml(node.id)}" class="graph-node" style="animation:fadeUp .35s ease ${index * 20}ms both"><circle cx="${p.x}" cy="${p.y}" r="15" fill="${c}" opacity=".9"/><circle cx="${p.x}" cy="${p.y}" r="26" fill="${c}" opacity=".1"/><text class="node-label" x="${p.x + 22}" y="${p.y + 4}">${escapeHtml(String(node.label).slice(0, 24))}</text></g>`;
   }).join('');
-  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Knowledge graph"><defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#33415f"/></marker></defs>${edgeSvg}${nodeSvg}</svg>`;
+  
+  return `<svg viewBox="0 0 ${w} ${h}" id="graphSvg" role="img" aria-label="Knowledge graph"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="18" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#334155"/></marker></defs>${edgeSvg}${nodeSvg}</svg>`;
+}
+
+function initInteractiveGraph() {
+  const svg = $('#graphSvg');
+  if (!svg) return;
+  
+  // 1. Mouse Drag to Pan Support
+  let isPanning = false;
+  let startX = 0, startY = 0;
+  let viewX = 0, viewY = 0;
+  
+  svg.addEventListener('mousedown', event => {
+    if (event.target.closest('.graph-node')) return; // Ignore drag on node click
+    isPanning = true;
+    startX = event.clientX;
+    startY = event.clientY;
+    const vb = svg.getAttribute('viewBox').split(' ').map(Number);
+    viewX = vb[0];
+    viewY = vb[1];
+  });
+
+  window.addEventListener('mousemove', event => {
+    if (!isPanning) return;
+    const dx = event.clientX - startX;
+    const dy = event.clientY - startY;
+    svg.setAttribute('viewBox', `${viewX - dx} ${viewY - dy} 1100 540`);
+  });
+
+  window.addEventListener('mouseup', () => { isPanning = false; });
+
+  // 2. Hover highlights logic
+  const nodes = $$('.graph-node', svg);
+  const edges = $$('.graph-edge', svg);
+  const canvasContainer = $('#graphCanvas');
+
+  nodes.forEach(node => {
+    node.addEventListener('mouseover', () => {
+      const nodeId = node.dataset.nodeId;
+      canvasContainer.classList.add('dimmed');
+      node.classList.add('highlighted');
+      
+      edges.forEach(edge => {
+        const source = edge.dataset.source;
+        const target = edge.dataset.target;
+        if (source === nodeId || target === nodeId) {
+          edge.querySelector('line').classList.add('highlighted');
+          
+          // Also highlight the connected node
+          const connectedId = source === nodeId ? target : source;
+          const connectedNode = svg.querySelector(`[data-node-id="${connectedId}"]`);
+          if (connectedNode) connectedNode.classList.add('highlighted');
+        }
+      });
+    });
+
+    node.addEventListener('mouseout', () => {
+      canvasContainer.classList.remove('dimmed');
+      $$('.highlighted', svg).forEach(el => el.classList.remove('highlighted'));
+      $$('line.highlighted', svg).forEach(el => el.classList.remove('highlighted'));
+    });
+  });
 }
 
 function renderObservabilityPage() {
   const stats = state.data.stats || {};
   const values = [
-    ['Event throughput', Math.min(100, (stats.events || 0) * 12), `${stats.events || 0} events`],
-    ['Incident creation', Math.min(100, (stats.incidents || 0) * 30), `${stats.incidents || 0} incidents`],
-    ['Alert pressure', Math.min(100, (stats.alerts || 0) * 25), `${stats.alerts || 0} alerts`],
-    ['Semantic memory', Math.min(100, (stats.documents || 0) * 25), `${stats.documents || 0} docs`],
-    ['Agent activity', Math.min(100, (stats.agent_runs || 0) * 20), `${stats.agent_runs || 0} runs`],
+    ['Event Ingestion Rate', Math.min(100, (stats.events || 0) * 12), `${stats.events || 0} events`],
+    ['Incident Pressure Gauge', Math.min(100, (stats.incidents || 0) * 35), `${stats.incidents || 0} incidents`],
+    ['Active Alert Queue', Math.min(100, (stats.alerts || 0) * 20), `${stats.alerts || 0} alerts`],
+    ['Semantic Memory Load', Math.min(100, (stats.documents || 0) * 20), `${stats.documents || 0} docs`],
+    ['Agent Runtime Core Usage', Math.min(100, (stats.agent_runs || 0) * 18), `${stats.agent_runs || 0} runs`],
   ];
   $('#metricBars').innerHTML = values.map(([name, pct, label]) => `<div class="metric-row"><b>${name}</b><div class="bar"><span style="width:${pct}%"></span></div><span>${label}</span></div>`).join('');
 }
@@ -530,11 +1105,11 @@ function renderSecurityPage() {
   ];
   $('#rbacMatrix').innerHTML = `<div class="table-wrap"><table class="rbac-table"><thead><tr><th>Permission</th>${roles.map(role => `<th>${role}</th>`).join('')}</tr></thead><tbody>${permissions.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   $('#userList').innerHTML = state.role === 'Admin'
-    ? (state.data.users.map(user => `<div class="item-card"><b>${escapeHtml(user.email)}</b> ${pill(user.role)}<p class="muted">${user.is_active ? 'Active' : 'Disabled'}</p></div>`).join('') || empty('No users loaded.'))
-    : empty('Admin role required to view users.');
+    ? (state.data.users.map(user => `<div class="item-card"><b>${escapeHtml(user.email)}</b> ${pill(user.role)}<p class="muted">${user.is_active ? 'Active' : 'Disabled'}</p></div>`).join('') || empty('No active system users.'))
+    : empty('Admin security privileges required.');
   $('#auditLogList').innerHTML = state.role === 'Admin'
     ? (state.data.audit.map(log => timelineItem(log.action, `${log.actor} · ${log.target_type || ''} ${log.target_id || ''} · ${fmtDate(log.created_at)}`, 'audit')).join('') || empty('No audit logs.'))
-    : empty('Admin role required to view audit logs.');
+    : empty('Admin security privileges required.');
 }
 
 function showModal(title, bodyHtml, actionsHtml = '') {
@@ -564,52 +1139,184 @@ function confetti() {
     el.className = 'confetti';
     el.style.left = `${Math.random() * 100}vw`;
     el.style.background = ['#67e8f9', '#a78bfa', '#34d399', '#fbbf24', '#fb7185'][i % 5];
-    el.style.animationDelay = `${Math.random() * 0.35}s`;
+    el.style.animationDelay = `${Math.random() * 0.3}s`;
     document.body.appendChild(el);
-    setTimeout(() => el.remove(), 1800);
+    setTimeout(() => el.remove(), 1600);
   }
 }
 
 async function seedDemo() {
   await api('/api/demo/seed', { method: 'POST', headers: authHeaders() });
-  toast('Demo scenario seeded', 'success');
+  toast('Demo sandbox environment re-seeded', 'success');
   confetti();
   await refreshAll({ quiet: true });
 }
 
 async function emitVision() {
-  await api('/api/vision/mock-detect', { method: 'POST', headers: authHeaders(), body: JSON.stringify({}) });
-  toast('Vision event emitted', 'success');
+  await api('/api/events', { 
+    method: 'POST', 
+    headers: authHeaders(), 
+    body: JSON.stringify({
+      event_type: 'restricted_zone_violation',
+      severity: 'high',
+      source_type: 'camera',
+      source_id: 'camera_zone_a',
+      location: { site: 'plant_1', zone: 'zone_a' },
+      payload: { object_detected: 'forklift', confidence: 0.96 },
+      trace: { producer: 'camera_mock_edge' }
+    })
+  });
+  toast('Vision zone alert event published', 'success');
   await refreshAll({ quiet: true });
 }
 
 async function emitTemp() {
-  await api('/api/sensors/temperature', { method: 'POST', headers: authHeaders(), body: JSON.stringify({}) });
-  toast('Sensor event emitted', 'success');
+  await api('/api/events', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      event_type: 'temperature_anomaly',
+      severity: 'high',
+      source_type: 'iot_sensor',
+      source_id: 'temp_machine_a',
+      location: { site: 'plant_1', zone: 'zone_a' },
+      payload: { temperature: 94.2, threshold: 85.0 },
+      trace: { producer: 'iot_gateway' }
+    })
+  });
+  toast('Sensor heat overload event published', 'success');
   await refreshAll({ quiet: true });
 }
 
 async function emitAudio() {
-  await api('/api/audio/mock-transcribe', { method: 'POST', headers: authHeaders(), body: JSON.stringify({}) });
-  toast('Audio event emitted', 'success');
+  await api('/api/events', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      event_type: 'grinding_noise',
+      severity: 'medium',
+      source_type: 'microphone',
+      source_id: 'mic_mach_a',
+      location: { site: 'plant_1', zone: 'zone_a' },
+      payload: { decibels: 94, frequency: 'high_pitch_harmonic' },
+      trace: { producer: 'audio_node' }
+    })
+  });
+  toast('Audio grinding warning event published', 'success');
   await refreshAll({ quiet: true });
 }
 
+/* ==========================================
+   LIVE AGENT PIPELINE RUN SIMULATOR
+   ========================================== */
+
 async function runAgent(incidentId) {
-  await api(`/api/incidents/${incidentId}/investigate`, { method: 'POST', headers: authHeaders() });
-  toast('Agent investigation completed', 'success');
-  await refreshAll({ quiet: true });
-  await showAgentRuns(incidentId);
+  setView('agents');
+  
+  const term = $('#agentTerminal');
+  const pipeline = $('#agentPipeline');
+  
+  term.classList.remove('hidden');
+  term.innerHTML = `<div class="log-ln info">[SYSTEM] Active trigger initiated for Incident: ${escapeHtml(incidentId)}...</div>`;
+  
+  // Helper to log with delays
+  const writeLog = (text, type = 'info') => {
+    const ln = document.createElement('div');
+    ln.className = `log-ln ${type}`;
+    ln.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+    term.appendChild(ln);
+    term.scrollTop = term.scrollHeight;
+  };
+  
+  // Highlight helper
+  const highlightStep = (nodeId) => {
+    $$('.agent-node', pipeline).forEach(node => {
+      if (node.dataset.node === nodeId) {
+        node.className = 'agent-node active';
+      } else {
+        // mark previous ones as completed
+        const steps = ['observer', 'retriever', 'investigator', 'planner', 'guard', 'executor'];
+        const currentIdx = steps.indexOf(nodeId);
+        const targetIdx = steps.indexOf(node.dataset.node);
+        if (targetIdx < currentIdx) {
+          node.className = 'agent-node completed';
+        } else {
+          node.className = 'agent-node';
+        }
+      }
+    });
+  };
+
+  try {
+    // Stage 1: Observer
+    highlightStep('observer');
+    writeLog('[Observer] Parsing normalized event bus stream for Incident ' + incidentId, 'info');
+    await new Promise(r => setTimeout(r, 1000));
+    writeLog('[Observer] Event patterns matching template [RestrictedZone + TemperatureOverload]. Risk window confirmed.', 'success');
+    
+    // Stage 2: Retriever
+    highlightStep('retriever');
+    writeLog('[Retriever] Executing vector database index search against knowledge graph...', 'info');
+    await new Promise(r => setTimeout(r, 1000));
+    writeLog('[Retriever] SOP document match found: safety_sop_zones.txt (score 0.94)', 'success');
+    writeLog('[Retriever] Context buffer successfully loaded with SOP guidelines.', 'success');
+
+    // Stage 3: Investigator
+    highlightStep('investigator');
+    writeLog('[Investigator] Synthesizing hypotheses for Machine A parameter breach...', 'info');
+    await new Promise(r => setTimeout(r, 1200));
+    writeLog('[Investigator] Hypothesis: Forklift operation near machine disrupted airflow, causing safety thermal trip.', 'warning');
+
+    // Stage 4: Planner
+    highlightStep('planner');
+    writeLog('[Planner] Creating action execution tickets & routing alerts...', 'info');
+    await new Promise(r => setTimeout(r, 1000));
+    writeLog('[Planner] Ticket quarantine_zone resolved. Alert notification dispatched.', 'success');
+
+    // Stage 5: Guard
+    highlightStep('guard');
+    writeLog('[Guard] Evaluating action playbook against plant policy restrictions...', 'info');
+    await new Promise(r => setTimeout(r, 1000));
+    writeLog('[Guard] Policy checks: PASS. Actions match standard incident mitigation rules.', 'success');
+
+    // Stage 6: Executor
+    highlightStep('executor');
+    writeLog('[Executor] Finalizing incident report and triggering database updates...', 'info');
+    
+    // Run the actual API call
+    await api(`/api/incidents/${incidentId}/investigate`, { method: 'POST', headers: authHeaders() });
+    
+    await new Promise(r => setTimeout(r, 800));
+    writeLog('[Executor] Run successfully committed. Summary written.', 'success');
+    
+    // Complete
+    $$('.agent-node', pipeline).forEach(node => node.className = 'agent-node completed');
+    
+    toast('Agent investigation simulation complete', 'success');
+    confetti();
+    
+    await refreshAll({ quiet: true });
+    await showAgentRuns(incidentId);
+    
+    // Set selected incident and open detail view
+    state.selectedIncidentId = incidentId;
+    setView('incidents');
+    renderIncidentDetail(incidentId);
+    
+  } catch (error) {
+    writeLog('[ERROR] Execution halted: ' + error.message, 'error');
+    toast(error.message, 'error');
+  }
 }
 
 async function updateIncidentStatus(incidentId, status) {
   await api(`/api/incidents/${incidentId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status }) });
-  toast(`Incident ${status}`, 'success');
+  toast(`Incident marked as ${status}`, 'success');
   await refreshAll({ quiet: true });
 }
 
 async function acknowledgeAlert(alertId) {
-  await api(`/api/alerts/${alertId}/acknowledge`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ note: 'Acknowledged from AMIF Console' }) });
+  await api(`/api/alerts/${alertId}/acknowledge`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ note: 'Operator acknowledged from OmniSight Cockpit' }) });
   toast('Alert acknowledged', 'success');
   await refreshAll({ quiet: true });
 }
@@ -623,8 +1330,19 @@ async function uploadDocument() {
   form.append('file', new File([text], name, { type: 'text/plain' }));
   form.append('document_type', 'manual');
   form.append('asset_id', asset);
-  const response = await fetch('/api/documents/upload', { method: 'POST', headers: { Authorization: `Bearer ${state.token}` }, body: form });
-  if (!response.ok) throw new Error(await response.text());
+  
+  if (state.useMocks) {
+    // Directly handle simulation upload
+    const body = new FormData();
+    body.append('file', text);
+    body.append('file_name', name);
+    body.append('asset_id', asset);
+    await api('/api/documents/upload', { method: 'POST', body });
+  } else {
+    const response = await fetch('/api/documents/upload', { method: 'POST', headers: { Authorization: `Bearer ${state.token}` }, body: form });
+    if (!response.ok) throw new Error(await response.text());
+  }
+  
   toast('Document indexed into semantic memory', 'success');
   await refreshAll({ quiet: true });
 }
@@ -633,13 +1351,13 @@ async function ragSearch() {
   const query = $('#ragQuery').value.trim();
   if (!query) return;
   const data = await api('/api/search/query', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ query, top_k: 8 }) });
-  $('#ragResults').innerHTML = data.hits.map(hit => `<article class="item-card"><div class="rowish"><b>${escapeHtml(hit.metadata?.file_name || hit.document_id)}</b><span class="badge">score ${hit.score}</span></div><p>${escapeHtml(hit.text)}</p><p class="mono muted">chunk ${escapeHtml(hit.chunk_id)} · asset ${escapeHtml(hit.metadata?.asset_id || 'global')}</p></article>`).join('') || empty('No relevant chunks found.');
+  $('#ragResults').innerHTML = data.hits.map(hit => `<article class="item-card"><div class="rowish"><b>${escapeHtml(hit.metadata?.file_name || hit.document_id)}</b><span class="badge">score ${hit.score}</span></div><p>${escapeHtml(hit.text)}</p><p class="mono muted">chunk ${escapeHtml(hit.chunk_id)} · asset ${escapeHtml(hit.metadata?.asset_id || 'global')}</p></article>`).join('') || empty('No matching Sop citations found.');
 }
 
 async function publishCustomEvent(form) {
   const fd = new FormData(form);
   let payload = {};
-  try { payload = JSON.parse(fd.get('payload') || '{}'); } catch { throw new Error('Payload must be valid JSON'); }
+  try { payload = JSON.parse(fd.get('payload') || '{}'); } catch { throw new Error('Payload format must be valid JSON'); }
   const body = {
     source_id: fd.get('source_id'),
     source_type: fd.get('source_type'),
@@ -647,10 +1365,10 @@ async function publishCustomEvent(form) {
     severity: fd.get('severity'),
     location: { site: 'plant_1', zone: 'operator_console' },
     payload,
-    trace: { producer: 'amif-console' },
+    trace: { producer: 'omnisight-console' },
   };
   await api('/api/events', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
-  toast('Custom event published', 'success');
+  toast('Custom event ingested', 'success');
   await refreshAll({ quiet: true });
 }
 
@@ -668,10 +1386,10 @@ function exportState() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `amif-export-${Date.now()}.json`;
+  a.download = `omnisight-export-${Date.now()}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  toast('Workspace export downloaded', 'success');
+  toast('Workspace backup JSON downloaded', 'success');
 }
 
 function toggleLive() {
@@ -681,9 +1399,9 @@ function toggleLive() {
   clearInterval(state.liveTimer);
   if (state.live) {
     state.liveTimer = setInterval(() => refreshAll({ quiet: true }), 8000);
-    toast('Live refresh enabled', 'success');
+    toast('Live dashboard monitoring enabled', 'success');
   } else {
-    toast('Live refresh disabled');
+    toast('Live updates paused');
   }
 }
 
@@ -691,39 +1409,121 @@ function toggleTheme() {
   state.theme = state.theme === 'light' ? 'dark' : 'light';
   localStorage.setItem('amif_theme', state.theme);
   applyTheme();
-  toast(`${state.theme} theme enabled`);
+  toast(`${state.theme} theme applied`);
+  if (state.currentView === 'overview') drawSparklines();
 }
 
-function toggleDensity() {
-  state.density = state.density === 'compact' ? 'comfortable' : 'compact';
-  localStorage.setItem('amif_density', state.density);
-  applyTheme();
-  toast(`${state.density} density enabled`);
+/* ==========================================
+   SETTINGS DIALOG & DATABASE CONFIGURES
+   ========================================== */
+
+function openSettings() {
+  $('#settingsModal').classList.remove('hidden');
+  $('#settingApiMode').value = state.apiMode;
+  $('#settingDensity').value = state.density;
+  $('#settingAnimations').value = state.animations;
 }
+
+function closeSettings() {
+  $('#settingsModal').classList.add('hidden');
+}
+
+async function saveSettings() {
+  const mode = $('#settingApiMode').value;
+  const dens = $('#settingDensity').value;
+  const anim = $('#settingAnimations').value;
+
+  state.apiMode = mode;
+  state.density = dens;
+  state.animations = anim;
+
+  localStorage.setItem('amif_api_mode', mode);
+  localStorage.setItem('amif_density', dens);
+  localStorage.setItem('amif_animations', anim);
+
+  closeSettings();
+  applyTheme();
+  toast('UX & DB configurations saved', 'success');
+  
+  // Re-evaluate API Mode connections
+  await evaluateApiMode();
+  await refreshAll({ quiet: true });
+}
+
+async function evaluateApiMode() {
+  let mode = state.apiMode;
+  
+  // Force sandbox mock mode on Github Pages
+  if (window.location.hostname.includes('github.io')) {
+    state.useMocks = true;
+    $('#sandboxBanner').classList.remove('hidden');
+    return;
+  }
+
+  if (mode === 'mock') {
+    state.useMocks = true;
+    $('#sandboxBanner').classList.remove('hidden');
+    return;
+  }
+  
+  if (mode === 'live') {
+    state.useMocks = false;
+    $('#sandboxBanner').classList.add('hidden');
+    return;
+  }
+
+  // Auto Detect mode: Ping backend to see if FastAPI is online
+  startProgress();
+  try {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 1200); // 1.2s timeout limit
+    
+    const response = await fetch('/api/system/stats', { signal: controller.signal });
+    clearTimeout(id);
+    
+    if (response.ok) {
+      state.useMocks = false;
+      $('#sandboxBanner').classList.add('hidden');
+      console.log('FastAPI server detected. Live mode activated.');
+    } else {
+      throw new Error('Server offline');
+    }
+  } catch (e) {
+    state.useMocks = true;
+    $('#sandboxBanner').classList.remove('hidden');
+    console.warn('FastAPI server offline. Fallback to Local Sandbox Mode.');
+  } finally {
+    finishProgress(false);
+  }
+}
+
+/* ==========================================
+   SPOTLIGHT SEARCH COMMANDS
+   ========================================== */
 
 function buildCommands() {
   const commands = [
-    { title: 'Go to Overview', hint: 'Navigation', run: () => setView('overview') },
-    { title: 'Go to Incidents', hint: 'Navigation', run: () => setView('incidents') },
-    { title: 'Go to Events', hint: 'Navigation', run: () => setView('events') },
-    { title: 'Go to Documents & RAG', hint: 'Navigation', run: () => setView('documents') },
-    { title: 'Go to Agent Runtime', hint: 'Navigation', run: () => setView('agents') },
-    { title: 'Go to Knowledge Graph', hint: 'Navigation', run: () => setView('graph') },
-    { title: 'Go to Observability', hint: 'Navigation', run: () => setView('observability') },
-    { title: 'Go to Security & Audit', hint: 'Navigation', run: () => setView('security') },
-    { title: 'Seed complete demo scenario', hint: 'Action', run: seedDemo },
-    { title: 'Emit vision forklift event', hint: 'Action', run: emitVision },
-    { title: 'Emit overheating sensor event', hint: 'Action', run: emitTemp },
-    { title: 'Emit audio transcript event', hint: 'Action', run: emitAudio },
-    { title: 'Refresh dashboard', hint: 'Action', run: refreshAll },
-    { title: 'Export workspace JSON', hint: 'Action', run: exportState },
-    { title: 'Toggle live refresh', hint: 'Action', run: toggleLive },
-    { title: 'Toggle theme', hint: 'Action', run: toggleTheme },
-    { title: 'Toggle density', hint: 'Action', run: toggleDensity },
+    { title: 'Go to Overview Screen', hint: 'Navigation', run: () => setView('overview') },
+    { title: 'Go to Incidents Command Desk', hint: 'Navigation', run: () => setView('incidents') },
+    { title: 'Go to Event Logs Explorer', hint: 'Navigation', run: () => setView('events') },
+    { title: 'Go to Document SOP Corpus', hint: 'Navigation', run: () => setView('documents') },
+    { title: 'Go to Agent Orchestrator Runs', hint: 'Navigation', run: () => setView('agents') },
+    { title: 'Go to Relationship Knowledge Graph', hint: 'Navigation', run: () => setView('graph') },
+    { title: 'Go to Observability Metrics', hint: 'Navigation', run: () => setView('observability') },
+    { title: 'Go to Security & Audit Matrix', hint: 'Navigation', run: () => setView('security') },
+    { title: 'Seed mock workspace databases', hint: 'Action', run: seedDemo },
+    { title: 'Ingest mock CCTV forklift event', hint: 'Action', run: emitVision },
+    { title: 'Ingest mock heating temperature alert', hint: 'Action', run: emitTemp },
+    { title: 'Ingest mock bearing sound anomaly', hint: 'Action', run: emitAudio },
+    { title: 'Reload cockpit statistics', hint: 'Action', run: refreshAll },
+    { title: 'Backup system data (JSON export)', hint: 'Action', run: exportState },
+    { title: 'Toggle real-time streaming sync', hint: 'Action', run: toggleLive },
+    { title: 'Toggle Light/Dark Theme', hint: 'Action', run: toggleTheme },
+    { title: 'Open Cockpit Configuration Manager', hint: 'Action', run: openSettings },
   ];
   state.data.incidents.forEach(incident => commands.push({
-    title: `Open incident: ${incident.title}`,
-    hint: `Risk ${incident.risk_score ?? 'n/a'} · ${incident.status}`,
+    title: `Open active Incident: ${incident.title}`,
+    hint: `Severity: ${incident.severity} · Risk ${incident.risk_score}%`,
     run: () => { state.selectedIncidentId = incident.incident_id; setView('incidents'); renderIncidentDetail(incident.incident_id); },
   }));
   return commands;
@@ -755,11 +1555,16 @@ function runSpotlightCommand(index = state.spotlightIndex) {
   Promise.resolve(command.run()).catch(error => toast(error.message, 'error'));
 }
 
+/* ==========================================
+   EVENT SUBSCRIBERS
+   ========================================== */
+
 function setupEvents() {
   $('#loginForm').addEventListener('submit', event => {
     event.preventDefault();
     login($('#loginEmail').value, $('#loginPassword').value).catch(error => toast(error.message, 'error'));
   });
+  
   $('#logoutBtn').addEventListener('click', () => logout());
   $('#refreshBtn').addEventListener('click', () => refreshAll());
   $('#seedDemoBtn').addEventListener('click', () => seedDemo().catch(error => toast(error.message, 'error')));
@@ -767,13 +1572,22 @@ function setupEvents() {
   $('#emitTemp').addEventListener('click', () => emitTemp().catch(error => toast(error.message, 'error')));
   $('#emitAudio').addEventListener('click', () => emitAudio().catch(error => toast(error.message, 'error')));
   $('#reloadGraphBtn').addEventListener('click', () => refreshAll({ quiet: true }).then(renderGraphPage));
+  
   $('#docUploadForm').addEventListener('submit', event => { event.preventDefault(); uploadDocument().catch(error => toast(error.message, 'error')); });
   $('#ragForm').addEventListener('submit', event => { event.preventDefault(); ragSearch().catch(error => toast(error.message, 'error')); });
   $('#customEventForm').addEventListener('submit', event => { event.preventDefault(); publishCustomEvent(event.target).catch(error => toast(error.message, 'error')); });
+  
   $('#commandBtn').addEventListener('click', openSpotlight);
   $('#themeBtn').addEventListener('click', toggleTheme);
   $('#liveBtn').addEventListener('click', toggleLive);
   $('#exportBtn').addEventListener('click', exportState);
+  
+  // Settings Modal Bindings
+  $('#settingsBtn').addEventListener('click', openSettings);
+  $('#bannerSettingsBtn').addEventListener('click', openSettings);
+  $('#closeSettingsBtn').addEventListener('click', closeSettings);
+  $('#saveSettingsBtn').addEventListener('click', saveSettings);
+  $('#settingsModal').addEventListener('click', event => { if (event.target.id === 'settingsModal') closeSettings(); });
 
   $('#nav').addEventListener('click', event => {
     const button = event.target.closest('[data-view]');
@@ -811,6 +1625,24 @@ function setupEvents() {
 
     const node = event.target.closest('[data-node-id]');
     if (node) showGraphNodeModal(node.dataset.nodeId);
+    
+    // Tab switching listener in Incident Command
+    const tabSelect = event.target.closest('[data-tab-select]');
+    if (tabSelect) {
+      const incId = tabSelect.dataset.incId;
+      const tabName = tabSelect.dataset.tabSelect;
+      state.incidentActiveTabs[incId] = tabName;
+      renderIncidentDetail(incId);
+    }
+    
+    // Playbook checklist toggle listener
+    const checkItem = event.target.closest('[data-playbook-check]');
+    if (checkItem) {
+      const incId = checkItem.dataset.incId;
+      const idx = Number(checkItem.dataset.playbookCheck);
+      state.playbooks[incId][idx].done = !state.playbooks[incId][idx].done;
+      renderIncidentDetail(incId);
+    }
   });
 
   $('#incidentStatusFilter').addEventListener('change', event => { state.filters.incidentStatus = event.target.value; renderIncidentsPage(); });
@@ -863,12 +1695,18 @@ function setupEvents() {
   });
 }
 
-function boot() {
+async function boot() {
+  initMockDb();
   applyTheme();
   setupEvents();
   showAppAuthed();
-  if (state.token) refreshAll({ quiet: true });
-  toast('Advanced UI loaded · Press Ctrl/⌘ K for commands');
+  
+  await evaluateApiMode();
+  
+  if (state.token) {
+    await refreshAll({ quiet: true });
+  }
+  toast('OmniSight Cockpit Active · Press Ctrl/⌘ K for commands');
 }
 
 boot();
