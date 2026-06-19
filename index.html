@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#070b16" />
+  <meta name="description"
+    content="AMIF v1.0 — Autonomous Multi-Modal Intelligence Fabric, a senior-level AI incident intelligence platform." />
+  <title>AMIF v1.0 — Autonomous Multi-Modal Intelligence Fabric</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;700;900&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="assets/home.css" />
+</head>
+
+<body>
+  <div id="pageProgress" class="page-progress"></div>
+  <canvas id="heroCanvas" class="hero-canvas" aria-hidden="true"></canvas>
+
+  <header class="site-header" id="siteHeader">
+    <a class="brand" href="index.html" aria-label="AMIF Home">
+      <span class="brand-mark">A</span>
+      <span><b>AMIF</b><small>Autonomous Intelligence Fabric</small></span>
+    </a>
+    <nav class="site-nav" aria-label="Primary navigation">
+      <a href="#architecture">Architecture</a>
+      <a href="#features">Features</a>
+      <a href="#demo-flow">Demo Flow</a>
+      <a href="#stack">Stack</a>
+      <a href="#structure">Structure</a>
+      <a href="#reports">Reports</a>
+    </nav>
+    <div class="header-actions">
+      <button id="themeToggle" class="icon-btn" title="Toggle theme">◐</button>
+      <a class="btn ghost" href="/docs" target="_blank">API Docs</a>
+      <a class="btn primary" href="console.html">Launch Console</a>
+    </div>
+    <button id="mobileMenuBtn" class="mobile-menu" aria-label="Open menu">☰</button>
+  </header>
+
+  <main>
+    <section class="hero section" id="top">
+      <div class="hero-content reveal">
+        <div class="eyebrow">Senior Full-Stack AI Architecture Project</div>
+        <h1>Autonomous Multi-Modal Incident Intelligence Fabric</h1>
+        <p class="hero-lead">AMIF turns camera, sensor, audio, document, and API signals into evidence-backed incident
+          investigations with agentic reasoning, safety guardrails, observability, and a polished operator console.</p>
+        <div class="hero-actions">
+          <a class="btn primary large" href="console.html">Open Operator Console</a>
+          <a class="btn secondary large" href="architecture.html">View Architecture</a>
+          <a class="btn ghost large" href="reports/AMIF_Interactive_Project_Report.html">Interactive Report</a>
+        </div>
+        <div class="trust-row" aria-label="Core loop">
+          <span>Detect</span><i></i><span>Correlate</span><i></i><span>Retrieve</span><i></i><span>Reason</span><i></i><span>Guard</span><i></i><span>Alert</span>
+        </div>
+      </div>
+      <aside class="hero-panel glass reveal" style="--delay:120ms">
+        <div class="panel-top"><span class="status-dot"></span><b>Live System Preview</b><small>v1.0 MVP</small></div>
+        <div class="metric-grid">
+          <div><b data-count="13">0</b><span>API domains</span></div>
+          <div><b data-count="6">0</b><span>agent stages</span></div>
+          <div><b data-count="9">0</b><span>console views</span></div>
+          <div><b data-count="4">0</b><span>memory layers</span></div>
+        </div>
+        <div class="mini-terminal" aria-label="Demo logs">
+          <div class="terminal-head"><i></i><i></i><i></i><span>amif-demo.log</span></div>
+          <pre id="typedLog"></pre>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section" id="architecture">
+      <div class="section-head reveal">
+        <span class="eyebrow">Architecture</span>
+        <h2>Production-style event-driven AI platform</h2>
+        <p>Built as a modular MVP with clean boundaries for future microservice extraction, Redpanda consumers, real
+          vision/audio models, Qdrant, Redis, and LangGraph.</p>
+      </div>
+      <div class="architecture-map reveal">
+        <div class="arch-node source">Data Sources<br><small>Cameras · Sensors · Audio · Docs</small></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node api">FastAPI Gateway<br><small>JWT · RBAC · Validation</small></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node bus">Event Bus<br><small>Redpanda-ready topics</small></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node process">Processing<br><small>Dedup · Enrich · Correlate</small></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node memory">Memory Fabric<br><small>Postgres · Redis · Qdrant · Graph</small></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node agent">Agents<br><small>Investigate · Plan · Guard</small></div>
+      </div>
+    </section>
+
+    <section class="section alt" id="features">
+      <div class="section-head reveal">
+        <span class="eyebrow">Product Capabilities</span>
+        <h2>Everything needed for a portfolio-grade AI platform</h2>
+      </div>
+      <div class="feature-grid">
+        <article class="feature-card reveal"><span>01</span>
+          <h3>Incident Command Center</h3>
+          <p>Filter, inspect, acknowledge, resolve, and investigate AI-generated incidents with evidence and actions.
+          </p>
+        </article>
+        <article class="feature-card reveal"><span>02</span>
+          <h3>Multimodal Event Operations</h3>
+          <p>Vision, audio, sensor, webhook, and custom canonical event flows with Redpanda-ready topic contracts.</p>
+        </article>
+        <article class="feature-card reveal"><span>03</span>
+          <h3>Documents & RAG</h3>
+          <p>Upload manuals, chunk documents, index semantic memory, and retrieve evidence-backed chunks.</p>
+        </article>
+        <article class="feature-card reveal"><span>04</span>
+          <h3>Agent Runtime</h3>
+          <p>Observer, Retriever, Investigator, Planner, Safety Guard, and Executor workflow with trace viewer.</p>
+        </article>
+        <article class="feature-card reveal"><span>05</span>
+          <h3>Knowledge Graph</h3>
+          <p>Interactive graph of incidents, events, machines, zones, and documents with relationship inspection.</p>
+        </article>
+        <article class="feature-card reveal"><span>06</span>
+          <h3>Governance & Audit</h3>
+          <p>JWT, RBAC, audit logs, human approval policies, and guardrail decisions for enterprise AI safety.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="demo-flow">
+      <div class="section-head reveal">
+        <span class="eyebrow">Demo Flow</span>
+        <h2>One-click scenario from raw events to AI investigation</h2>
+      </div>
+      <div class="flow-grid reveal">
+        <div class="flow-step"><b>1</b>
+          <h3>Seed Demo</h3>
+          <p>Upload Machine A manual and generate operational signals.</p>
+        </div>
+        <div class="flow-step"><b>2</b>
+          <h3>Detect</h3>
+          <p>Forklift appears in a restricted zone from camera event.</p>
+        </div>
+        <div class="flow-step"><b>3</b>
+          <h3>Correlate</h3>
+          <p>Temperature anomaly is matched within the rule window.</p>
+        </div>
+        <div class="flow-step"><b>4</b>
+          <h3>Investigate</h3>
+          <p>Agent retrieves evidence, creates hypotheses, risk, and actions.</p>
+        </div>
+        <div class="flow-step"><b>5</b>
+          <h3>Guard</h3>
+          <p>Safety policy blocks risky autonomous actions.</p>
+        </div>
+        <div class="flow-step"><b>6</b>
+          <h3>Explain</h3>
+          <p>Dashboard shows summary, trace, graph, alerts, and audit logs.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt" id="stack">
+      <div class="section-head reveal">
+        <span class="eyebrow">Technology Stack</span>
+        <h2>Full-stack implementation with AI-ready boundaries</h2>
+      </div>
+      <div class="stack-board reveal">
+        <div>
+          <h3>Backend</h3>
+          <p>FastAPI · Pydantic · SQLAlchemy · JWT · RBAC</p>
+        </div>
+        <div>
+          <h3>Streaming</h3>
+          <p>Redpanda-ready topics · FastStream extraction path</p>
+        </div>
+        <div>
+          <h3>Memory</h3>
+          <p>PostgreSQL · Redis-ready · Qdrant-ready · Graph API</p>
+        </div>
+        <div>
+          <h3>AI</h3>
+          <p>YOLO boundary · Whisper boundary · RAG · Agent runtime · Guardrails</p>
+        </div>
+        <div>
+          <h3>Frontend</h3>
+          <p>Advanced vanilla JS · animated UI · command palette · modals</p>
+        </div>
+        <div>
+          <h3>Ops</h3>
+          <p>Docker Compose · Prometheus · Grafana · Kubernetes manifests</p>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="section" id="structure">
+      <div class="section-head reveal">
+        <span class="eyebrow">Project Structure</span>
+        <h2>Complete file structure, routes, and implementation map</h2>
+        <p>This section shows exactly where the frontend, backend, APIs, reports, infrastructure, connectors, and
+          documentation live inside the AMIF project.</p>
+      </div>
+
+      <div class="structure-grid">
+        <article class="structure-card tree-card reveal">
+          <div class="card-head">
+            <h3>Repository Tree</h3>
+            <span>amif/</span>
+          </div>
+          <div class="file-tree" aria-label="AMIF repository structure">
+            <details open>
+              <summary>amif/</summary>
+              <details open>
+                <summary>backend/</summary>
+                <details open>
+                  <summary>app/</summary>
+                  <details>
+                    <summary>core/</summary>
+                    <p>config.py · security.py</p>
+                  </details>
+                  <details>
+                    <summary>db/</summary>
+                    <p>session.py · init_db.py</p>
+                  </details>
+                  <details>
+                    <summary>models/</summary>
+                    <p>models.py · enums.py</p>
+                  </details>
+                  <details>
+                    <summary>schemas/</summary>
+                    <p>schemas.py</p>
+                  </details>
+                  <details open>
+                    <summary>routers/</summary>
+                    <p>auth.py · events.py · incidents.py · alerts.py · documents.py · audio.py · actions.py · audit.py
+                      · users.py · notifications.py · knowledge.py · system.py · demo.py · health.py</p>
+                  </details>
+                  <details open>
+                    <summary>services/</summary>
+                    <p>event_service.py · event_processor.py · agent_service.py · search_service.py ·
+                      document_service.py · action_service.py · audit_service.py</p>
+                  </details>
+                  <details open>
+                    <summary>static/</summary>
+                    <p>index.html · console.html · architecture.html · assets/ · reports/</p>
+                  </details>
+                  <p class="tree-file">main.py</p>
+                </details>
+                <p class="tree-file">Dockerfile · requirements.txt</p>
+              </details>
+              <details open>
+                <summary>connectors/</summary>
+                <p>camera_connector.py · audio_connector.py · iot_connector.py · document_connector.py ·
+                  email_connector.py</p>
+              </details>
+              <details open>
+                <summary>infra/</summary>
+                <p>k8s/ · prometheus/</p>
+              </details>
+              <details open>
+                <summary>docs/</summary>
+                <p>architecture.md · api-spec.md · evaluation.md · frontend-ux.md · senior-architecture-blueprint.md</p>
+              </details>
+              <details open>
+                <summary>reports/</summary>
+                <p>PDF report · PPTX presentation · interactive HTML report · report generators</p>
+              </details>
+              <details>
+                <summary>scripts/</summary>
+                <p>seed_demo.py</p>
+              </details>
+              <p class="tree-file">docker-compose.yml · README.md · .env.example</p>
+            </details>
+          </div>
+        </article>
+
+        <article class="structure-card reveal">
+          <div class="card-head">
+            <h3>Frontend Routes</h3><span>Static UI</span>
+          </div>
+          <div class="route-list">
+            <a href="index.html">/ <small>Professional project home page</small></a>
+            <a href="console.html">/console.html <small>Full AMIF operator dashboard</small></a>
+            <a href="architecture.html">/architecture.html <small>System architecture visual</small></a>
+            <a href="reports/AMIF_Interactive_Project_Report.html">/reports/AMIF_Interactive_Project_Report.html
+              <small>Interactive report</small></a>
+            <a href="reports/AMIF_Complete_Project_Report.pdf">/reports/AMIF_Complete_Project_Report.pdf <small>PDF
+                report</small></a>
+            <a href="reports/AMIF_Project_Presentation.pptx">/reports/AMIF_Project_Presentation.pptx
+              <small>Presentation</small></a>
+          </div>
+        </article>
+      </div>
+
+      <div class="implementation-map reveal">
+        <article class="structure-card">
+          <div class="card-head">
+            <h3>Backend Domain Map</h3><span>FastAPI</span>
+          </div>
+          <table class="info-table">
+            <thead>
+              <tr>
+                <th>Domain</th>
+                <th>Files</th>
+                <th>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Auth/RBAC</td>
+                <td>core/security.py · routers/auth.py · routers/users.py</td>
+                <td>JWT login, password hashing, user roles, access control.</td>
+              </tr>
+              <tr>
+                <td>Events</td>
+                <td>routers/events.py · services/event_service.py</td>
+                <td>Canonical event ingestion for cameras, sensors, webhooks, and services.</td>
+              </tr>
+              <tr>
+                <td>Processing</td>
+                <td>services/event_processor.py</td>
+                <td>Anomaly derivation, time-window correlation, incident and alert creation.</td>
+              </tr>
+              <tr>
+                <td>Incidents</td>
+                <td>routers/incidents.py · models/models.py</td>
+                <td>Incident queue, status updates, agent investigation triggers.</td>
+              </tr>
+              <tr>
+                <td>Documents/RAG</td>
+                <td>routers/documents.py · services/document_service.py · services/search_service.py</td>
+                <td>Manual upload, chunking, deterministic semantic retrieval fallback.</td>
+              </tr>
+              <tr>
+                <td>Agents</td>
+                <td>services/agent_service.py</td>
+                <td>Observer, Retriever, Investigator, Planner, Guard, Executor workflow.</td>
+              </tr>
+              <tr>
+                <td>Actions/Audit</td>
+                <td>routers/actions.py · routers/audit.py · services/action_service.py · services/audit_service.py</td>
+                <td>Ticket stubs, notifications, audit logs, governance trail.</td>
+              </tr>
+              <tr>
+                <td>Graph/System</td>
+                <td>routers/knowledge.py · routers/system.py</td>
+                <td>Knowledge graph, system stats, dashboard metrics.</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+      </div>
+
+      <div class="structure-grid reveal">
+        <article class="structure-card">
+          <div class="card-head">
+            <h3>Important Static Assets</h3><span>UI</span>
+          </div>
+          <ul class="clean-list">
+            <li><b>/assets/home.css</b> — homepage design system.</li>
+            <li><b>/assets/home.js</b> — homepage animations, theme, particle background.</li>
+            <li><b>/assets/app.css</b> — AMIF console design system.</li>
+            <li><b>/assets/app.js</b> — full dashboard SPA logic and API integration.</li>
+            <li><b>/reports/</b> — downloadable PDF, PPTX, and interactive HTML report.</li>
+          </ul>
+        </article>
+
+        <article class="structure-card">
+          <div class="card-head">
+            <h3>Run Commands</h3><span>Local</span>
+          </div>
+          <pre class="code-block">cd amif
+cp .env.example .env
+docker compose up --build
+
+# Open
+http://localhost:8000/
+http://localhost:8000/console.html
+http://localhost:8000/docs</pre>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="reports">
+      <div class="section-head reveal">
+        <span class="eyebrow">Documentation</span>
+        <h2>Reports, architecture, and developer resources</h2>
+      </div>
+      <div class="resource-grid">
+        <a class="resource-card reveal" href="console.html"><b>Operator Console</b><span>Run the full AMIF
+            dashboard</span></a>
+        <a class="resource-card reveal" href="architecture.html"><b>Architecture Page</b><span>System architecture
+            visual</span></a>
+        <a class="resource-card reveal" href="reports/AMIF_Interactive_Project_Report.html"><b>Interactive
+            Report</b><span>Full visual project report</span></a>
+        <a class="resource-card reveal" href="reports/AMIF_Complete_Project_Report.pdf"><b>PDF Report</b><span>Detailed
+            downloadable report</span></a>
+        <a class="resource-card reveal"
+          href="reports/AMIF_Project_Presentation.pptx"><b>Presentation</b><span>PowerPoint project slides</span></a>
+        <a class="resource-card reveal" href="/docs" target="_blank"><b>API Docs</b><span>FastAPI OpenAPI
+            documentation</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div><b>AMIF v1.0</b><span>Autonomous Multi-Modal Intelligence Fabric</span></div>
+    <a href="console.html">Launch Console →</a>
+  </footer>
+
+  <script src="assets/home.js"></script>
+</body>
+
+</html>
