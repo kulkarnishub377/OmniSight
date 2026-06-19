@@ -3,7 +3,7 @@ from typing import Iterable
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from passlib.context import CryptContext
+import bcrypt
 import jwt
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -25,15 +25,14 @@ ROLE_RANK = {
 
 limiter = Limiter(key_func=get_remote_address)
 
-pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
-
 def get_password_hash(password: str) -> str:
     """Return a bcrypt password hash."""
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
-        return pwd_context.verify(plain_password, hashed_password)
+        # bcrypt.checkpw requires bytes
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
     except Exception:
         return False
 
