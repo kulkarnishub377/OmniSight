@@ -630,6 +630,7 @@ function renderShared() {
   ];
   const html = kpis.map(([label, value, sub, glow]) => `
     <div class="kpi" style="--glow:${glow}">
+      <canvas class="kpi-sparkline" data-kpi-spark="${label.toLowerCase().replace(' ', '_')}"></canvas>
       <div class="kpi-label">${label}</div>
       <div class="kpi-value" data-target="${value ?? 0}">${value ?? 0}</div>
       <div class="kpi-sub">${sub}</div>
@@ -641,6 +642,7 @@ function renderShared() {
   animateKpis();
   renderInsights();
   drawSparklines();
+  drawKpiSparklines();
 }
 
 function animateKpis() {
@@ -756,6 +758,272 @@ function drawSparklines() {
       ctx.stroke();
     });
   });
+}
+
+function drawKpiSparklines() {
+  $$('canvas[data-kpi-spark]').forEach(canvas => {
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    const w = rect.width;
+    const h = rect.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const type = canvas.dataset.kpiSpark;
+    const stats = state.data.stats || {};
+    
+    let trend = [];
+    if (type === 'events') {
+      const current = state.data.events.length || stats.events || 0;
+      trend = [Math.round(current * 0.4), Math.round(current * 0.65), Math.round(current * 0.5), Math.round(current * 0.8), Math.round(current * 0.72), Math.round(current * 0.9), current];
+    } else if (type === 'incidents') {
+      const current = state.data.incidents.length || stats.incidents || 0;
+      trend = [Math.round(current * 0.3), Math.round(current * 0.5), Math.round(current * 0.4), Math.round(current * 0.7), Math.round(current * 0.6), Math.round(current * 0.85), current];
+    } else if (type === 'alerts') {
+      const current = state.data.alerts.length || stats.alerts || 0;
+      trend = [Math.round(current * 0.2), Math.round(current * 0.4), Math.round(current * 0.3), Math.round(current * 0.6), Math.round(current * 0.5), Math.round(current * 0.8), current];
+    } else if (type === 'documents') {
+      const current = state.data.documents.length || stats.documents || 0;
+      trend = [Math.round(current * 0.5), Math.round(current * 0.5), Math.round(current * 0.7), Math.round(current * 0.7), Math.round(current * 0.9), Math.round(current * 0.9), current];
+    } else if (type === 'agent_runs') {
+      const current = Object.values(mockDb.agentRuns).flat().length || stats.agent_runs || 0;
+      trend = [Math.round(current * 0.35), Math.round(current * 0.55), Math.round(current * 0.45), Math.round(current * 0.75), Math.round(current * 0.7), Math.round(current * 0.92), current];
+    } else {
+      trend = [5, 10, 8, 12, 11, 15, 14];
+    }
+
+    trend = trend.map(v => typeof v === 'number' && !isNaN(v) ? v : 0);
+    const max = Math.max(...trend, 1);
+    const min = Math.min(...trend, 0);
+    const range = max - min || 1;
+
+    const points = trend.map((val, idx) => {
+      const x = (idx / (trend.length - 1)) * w;
+      const y = h - ((val - min) / range) * (h - 8) - 4;
+      return { x, y };
+    });
+
+    let color = '#67e8f9';
+    let glow = 'rgba(103,232,249,0.04)';
+    if (type === 'incidents') {
+      color = '#fb7185';
+      glow = 'rgba(251,113,133,0.04)';
+    } else if (type === 'alerts') {
+      color = '#fbbf24';
+      glow = 'rgba(251,191,36,0.04)';
+    } else if (type === 'documents') {
+      color = '#34d399';
+      glow = 'rgba(52,211,153,0.04)';
+    } else if (type === 'agent_runs') {
+      color = '#a78bfa';
+      glow = 'rgba(167,139,250,0.04)';
+    }
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.beginPath();
+    points.forEach((p, idx) => {
+      if (idx === 0) ctx.moveTo(p.x, p.y);
+      else {
+        const prev = points[idx - 1];
+        const cx = (prev.x + p.x) / 2;
+        ctx.quadraticCurveTo(prev.x, prev.y, cx, (prev.y + p.y) / 2);
+      }
+    });
+    ctx.lineTo(w, points[points.length - 1].y);
+    ctx.stroke();
+
+    ctx.lineTo(w, h);
+    ctx.lineTo(0, h);
+    ctx.closePath();
+    ctx.fillStyle = glow;
+    ctx.fill();
+  });
+}
+
+function updateCurlCommand() {
+  const form = $('#customEventForm');
+  if (!form) return;
+  const fd = new FormData(form);
+  const auth = $('#apiHeaderAuth')?.value || 'Bearer os_live_79a32c';
+  
+  let payloadStr = fd.get('payload') || '{}';
+  let payloadObj = {};
+  try {
+    payloadObj = JSON.parse(payloadStr);
+  } catch (e) {
+    payloadObj = { note: payloadStr };
+  }
+
+  const body = {
+    source_id: fd.get('source_id') || 'webhook_demo',
+    source_type: fd.get('source_type') || 'webhook',
+    event_type: fd.get('event_type') || 'manual_observation',
+    severity: fd.get('severity') || 'low',
+    location: { site: 'plant_1', zone: 'operator_console' },
+    payload: payloadObj,
+    trace: { producer: 'omnisight-console' }
+  };
+
+  const curlStr = `curl -X POST http://localhost:8000/api/events \\\n  -H "Authorization: ${auth}" \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(body)}'`;
+
+  const curlEl = $('#curlCommandLine');
+  if (curlEl) {
+    curlEl.textContent = curlStr;
+  }
+}
+
+function selectDocumentForChunkMap(docId) {
+  state.selectedDocId = docId;
+  const doc = state.data.documents.find(d => d.document_id === docId);
+  if (!doc) return;
+
+  $('#chunkGridDocName').textContent = doc.file_name;
+  $('#chunkGridContainer').classList.remove('hidden');
+
+  const chunks = [];
+  const textParts = doc.text.split('.').map(s => s.trim()).filter(Boolean);
+  
+  textParts.forEach((part, index) => {
+    chunks.push({
+      chunk_id: `${docId}_chunk_${index}`,
+      text: part + '.',
+      token_count: Math.round(part.split(/\s+/).length * 1.3) + 4,
+      score: 0
+    });
+  });
+
+  state.currentDocChunks = chunks;
+  renderChunkBlocks(chunks);
+}
+
+function renderChunkBlocks(chunks) {
+  const grid = $('#chunkGrid');
+  if (!grid) return;
+
+  grid.innerHTML = chunks.map((chunk, idx) => {
+    let extraClass = '';
+    let style = '';
+    if (chunk.score > 0) {
+      extraClass = 'matched-chunk';
+      const opacity = Math.min(1, chunk.score);
+      style = `style="background: rgba(103, 232, 249, ${opacity}); border-color: rgba(103, 232, 249, ${opacity + 0.2});"`;
+    }
+    return `
+      <div class="chunk-block ${extraClass}" ${style}>
+        <div class="chunk-tooltip">
+          <div style="font-weight:700; color:var(--cyan); margin-bottom:4px;">Chunk #${idx + 1}</div>
+          <p style="margin:0 0 6px 0; max-height: 80px; overflow-y: auto;">"${escapeHtml(chunk.text)}"</p>
+          <div style="display:flex; justify-content:space-between; font-size:9px; color:var(--muted);">
+            <span>Tokens: <b>${chunk.token_count}</b></span>
+            ${chunk.score > 0 ? `<span style="color:var(--cyan);">Score: <b>${chunk.score.toFixed(2)}</b></span>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderGraphDrawer() {
+  const listEl = $('#graphDrawerList');
+  if (!listEl) return;
+
+  const { nodes = [], edges = [] } = state.data.graph || {};
+  const query = (state.graphSearchQuery || '').toLowerCase();
+
+  if (state.graphActiveTab === 'nodes') {
+    const filteredNodes = nodes.filter(node => 
+      !query || 
+      node.label.toLowerCase().includes(query) || 
+      node.type.toLowerCase().includes(query) || 
+      node.id.toLowerCase().includes(query)
+    );
+
+    listEl.innerHTML = filteredNodes.map(node => `
+      <div class="item-card graph-drawer-item" data-drawer-node-id="${escapeHtml(node.id)}" style="cursor:pointer; transition:all 0.2s; padding:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <b style="font-size:12px; color:var(--text);">${escapeHtml(node.label)}</b>
+          ${pill(node.type)}
+        </div>
+        <p class="mono muted" style="font-size:10px; margin:4px 0 0 0;">${escapeHtml(node.id)}</p>
+      </div>
+    `).join('') || `<div class="empty-state" style="padding:16px;">No nodes found</div>`;
+  } else {
+    const filteredEdges = edges.filter(edge => 
+      !query || 
+      edge.relation.toLowerCase().includes(query) || 
+      edge.source.toLowerCase().includes(query) || 
+      edge.target.toLowerCase().includes(query)
+    );
+
+    listEl.innerHTML = filteredEdges.map(edge => `
+      <div class="item-card graph-drawer-item" style="font-size:11px; padding:10px;">
+        <div style="font-weight:700; color:var(--cyan);">${escapeHtml(edge.relation)}</div>
+        <div style="display:flex; justify-content:space-between; margin-top:4px; font-family:var(--font-mono); font-size:9px; color:var(--muted);">
+          <span>Source: ${shortId(edge.source)}</span>
+          <span>→</span>
+          <span>Target: ${shortId(edge.target)}</span>
+        </div>
+      </div>
+    `).join('') || `<div class="empty-state" style="padding:16px;">No edges found</div>`;
+  }
+}
+
+function centerGraphOnNode(nodeId) {
+  const pos = state.graphNodePositions?.[nodeId];
+  const svg = $('#graphSvg');
+  if (!pos || !svg) return;
+
+  const startVb = svg.getAttribute('viewBox').split(' ').map(Number);
+  const targetVb = [pos.x - 1100 / 2, pos.y - 540 / 2, 1100, 540];
+
+  const startTime = performance.now();
+  const duration = 400;
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(1, elapsed / duration);
+    const ease = 1 - Math.pow(1 - progress, 3);
+
+    const currentVb = startVb.map((val, idx) => val + (targetVb[idx] - val) * ease);
+    svg.setAttribute('viewBox', currentVb.join(' '));
+
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      const nodeEl = svg.querySelector(`[data-node-id="${nodeId}"]`);
+      if (nodeEl) {
+        nodeEl.classList.add('highlighted');
+        setTimeout(() => nodeEl.classList.remove('highlighted'), 1500);
+      }
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+function applyGraphDrawerCollapseState() {
+  const drawer = $('#graphDrawer');
+  const toggleBtn = $('#toggleGraphDrawerBtn');
+  const grid = $('.graph-layout-grid');
+  if (!drawer || !grid) return;
+
+  if (state.graphDrawerCollapsed) {
+    drawer.classList.add('hidden');
+    grid.style.gridTemplateColumns = '1fr';
+    if (toggleBtn) toggleBtn.textContent = 'Tactical Sidebar';
+  } else {
+    drawer.classList.remove('hidden');
+    grid.style.gridTemplateColumns = '1fr 340px';
+    if (toggleBtn) toggleBtn.textContent = 'Hide Sidebar';
+  }
 }
 
 function filteredIncidents() {
@@ -990,7 +1258,13 @@ function renderEventsPage() {
 }
 
 function renderDocumentsPage() {
-  $('#documentList').innerHTML = state.data.documents.map(doc => `<article class="item-card"><span class="badge">${escapeHtml(doc.document_type)}</span><h4>${escapeHtml(doc.file_name)}</h4><p>Asset ID: ${escapeHtml(doc.asset_id || 'global')} · ${doc.chunk_count} chunks</p><p class="mono muted">${shortId(doc.document_id)}</p></article>`).join('') || empty('No documents uploaded.');
+  $('#documentList').innerHTML = state.data.documents.map(doc => `
+    <article class="item-card" data-document-card-id="${escapeHtml(doc.document_id)}" style="cursor:pointer; transition:border-color 0.2s;">
+      <span class="badge">${escapeHtml(doc.document_type)}</span>
+      <h4>${escapeHtml(doc.file_name)}</h4>
+      <p>Asset ID: ${escapeHtml(doc.asset_id || 'global')} · ${doc.chunk_count} chunks</p>
+      <p class="mono muted">${shortId(doc.document_id)}</p>
+    </article>`).join('') || empty('No documents uploaded.');
 }
 
 function renderAgentsPage() {
@@ -999,19 +1273,59 @@ function renderAgentsPage() {
 
 async function showAgentRuns(incidentId) {
   try {
+    $('#agentTraceViewer').innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">Loading trace...</div>';
     const runs = await api(`/api/incidents/${incidentId}/agent-runs`, { headers: authHeaders(false) });
-    $('#agentTraceViewer').innerHTML = runs.map(run => `<article class="item-card"><div class="rowish"><b>Run ${shortId(run.run_id)}</b>${pill(run.status)}</div><p class="muted">${fmtDate(run.created_at)} · workflow ${escapeHtml(run.workflow_version)}</p><h4>Output</h4>${jsonBlock(run.output)}<h4>Trace</h4>${jsonBlock(run.trace)}</article>`).join('') || empty('No agent traces found.');
+    $('#agentTraceViewer').innerHTML = runs.map(run => {
+      const riskScore = run.output?.risk_score ?? 'N/A';
+      const summary = escapeHtml(run.output?.summary ?? 'No summary provided.');
+      return `
+      <div class="ai-chat-card">
+        <div class="ai-chat-header rowish">
+          <div class="ai-avatar">A</div>
+          <div style="flex:1">
+            <b style="font-size:14px;">OmniSight Agent ${shortId(run.run_id)}</b>
+            <p class="muted" style="margin:0; font-size:11px;">Workflow: ${escapeHtml(run.workflow_version)} · ${fmtDate(run.created_at)}</p>
+          </div>
+          ${pill(run.status)}
+        </div>
+        <div class="ai-chat-body">
+          <div class="ai-summary-box">
+            <h4 style="margin:0 0 8px 0; font-size:12px; text-transform:uppercase; color:var(--cyan);">Investigation Conclusion</h4>
+            <p style="margin:0; line-height:1.6; font-size:14px; color:var(--text);">${summary}</p>
+          </div>
+          <div class="ai-metric-row" style="display:flex; gap:16px; margin: 16px 0;">
+            <div class="ai-metric" style="background:var(--bg); padding:10px 16px; border-radius:8px; border:1px solid var(--line);">
+              <span style="font-size:11px; color:var(--muted); display:block; text-transform:uppercase;">Calculated Risk</span>
+              <b style="font-size:16px; color:var(--red);">${riskScore}</b>
+            </div>
+          </div>
+          <details class="ai-details" style="margin-top:12px;">
+            <summary style="cursor:pointer; color:var(--blue); font-size:13px; font-weight:600;">View Raw Output</summary>
+            <div style="margin-top:10px;">${jsonBlock(run.output)}</div>
+          </details>
+          <details class="ai-details" style="margin-top:8px;">
+            <summary style="cursor:pointer; color:var(--blue); font-size:13px; font-weight:600;">View Execution Trace</summary>
+            <div style="margin-top:10px;">${jsonBlock(run.trace)}</div>
+          </details>
+        </div>
+      </div>`;
+    }).join('') || empty('No agent traces found.');
     setView('agents');
   } catch (error) {
     toast(error.message, 'error');
+    $('#agentTraceViewer').innerHTML = empty('Failed to load agent traces.');
   }
 }
 
 function renderGraphPage() {
   const { nodes = [], edges = [] } = state.data.graph || {};
-  $('#graphNodes').innerHTML = nodes.map(node => `<div class="item-card"><b>${escapeHtml(node.label)}</b> ${pill(node.type)}<p class="mono muted">${escapeHtml(node.id)}</p></div>`).join('') || empty('No nodes indexed.');
-  $('#graphEdges').innerHTML = edges.map(edge => `<div class="item-card"><b>${escapeHtml(edge.relation)}</b><p class="mono muted">${shortId(edge.source)} → ${shortId(edge.target)}</p></div>`).join('') || empty('No graph connections.');
   $('#graphCanvas').innerHTML = renderGraphSvg(nodes, edges);
+  
+  if (state.graphActiveTab === undefined) state.graphActiveTab = 'nodes';
+  if (state.graphSearchQuery === undefined) state.graphSearchQuery = '';
+  
+  renderGraphDrawer();
+  applyGraphDrawerCollapseState();
 }
 
 /* ==========================================
@@ -1032,6 +1346,7 @@ function renderGraphSvg(nodes, edges) {
     const jitter = (index % 3) * 12;
     pos[node.id] = { x: cx + Math.cos(angle) * (r + jitter), y: cy + Math.sin(angle) * (r + jitter) };
   });
+  state.graphNodePositions = pos; // Save computed node positions to state for centering
   
   const color = type => ({ Incident: '#fb7185', Event: '#67e8f9', Machine: '#34d399', Zone: '#fbbf24', Document: '#a78bfa' }[type] || '#cbd5e1');
   
@@ -1385,6 +1700,34 @@ async function ragSearch() {
   if (!query) return;
   const data = await api('/api/search/query', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ query, top_k: 8 }) });
   $('#ragResults').innerHTML = data.hits.map(hit => `<article class="item-card"><div class="rowish"><b>${escapeHtml(hit.metadata?.file_name || hit.document_id)}</b><span class="badge">score ${hit.score}</span></div><p>${escapeHtml(hit.text)}</p><p class="mono muted">chunk ${escapeHtml(hit.chunk_id)} · asset ${escapeHtml(hit.metadata?.asset_id || 'global')}</p></article>`).join('') || empty('No matching Sop citations found.');
+
+  // Automatically select matching document for chunk map visual RAG highlights
+  if (data.hits && data.hits.length > 0) {
+    const matchDocId = data.hits[0].document_id;
+    selectDocumentForChunkMap(matchDocId);
+    
+    if (state.currentDocChunks && state.selectedDocId === matchDocId) {
+      state.currentDocChunks.forEach(chunk => {
+        const hit = data.hits.find(h => chunk.text.includes(h.text) || h.text.includes(chunk.text));
+        if (hit) {
+          chunk.score = hit.score || 0.95;
+        } else {
+          chunk.score = calculateFuzzyMatchScore(chunk.text, query);
+        }
+      });
+      renderChunkBlocks(state.currentDocChunks);
+    }
+  }
+}
+
+function calculateFuzzyMatchScore(text, query) {
+  const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+  if (!words.length) return 0;
+  let matches = 0;
+  words.forEach(w => {
+    if (text.toLowerCase().includes(w)) matches++;
+  });
+  return matches > 0 ? (matches / words.length) * 0.8 : 0;
 }
 
 async function publishCustomEvent(form) {
@@ -1400,9 +1743,47 @@ async function publishCustomEvent(form) {
     payload,
     trace: { producer: 'omnisight-console' },
   };
-  await api('/api/events', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
-  toast('Custom event ingested', 'success');
-  await refreshAll({ quiet: true });
+
+  const statusEl = $('#playgroundResponseStatus');
+  const headersEl = $('#playgroundResponseHeaders');
+  const payloadEl = $('#playgroundResponsePayload');
+
+  if (statusEl) {
+    statusEl.textContent = 'HTTP/1.1 100 Continue (Sending request...)';
+    statusEl.style.color = '#fbbf24';
+  }
+
+  try {
+    const resData = await api('/api/events', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    
+    if (statusEl) {
+      statusEl.textContent = 'HTTP/1.1 201 Created';
+      statusEl.style.color = '#34d399';
+    }
+    if (headersEl) {
+      const dateStr = new Date().toUTCString();
+      const contentLen = JSON.stringify(resData).length;
+      headersEl.textContent = `date: ${dateStr}\nserver: uvicorn/fastapi\ncontent-type: application/json\ncontent-length: ${contentLen}\nx-ratelimit-limit: 1000\nx-ratelimit-remaining: 999\naccess-control-allow-origin: *`;
+    }
+    if (payloadEl) {
+      payloadEl.textContent = JSON.stringify(resData, null, 2);
+    }
+
+    toast('Custom event ingested', 'success');
+    await refreshAll({ quiet: true });
+  } catch (error) {
+    if (statusEl) {
+      statusEl.textContent = 'HTTP/1.1 400 Bad Request';
+      statusEl.style.color = '#fca5a5';
+    }
+    if (headersEl) {
+      headersEl.textContent = `date: ${new Date().toUTCString()}\nserver: uvicorn/fastapi\ncontent-type: application/json`;
+    }
+    if (payloadEl) {
+      payloadEl.textContent = JSON.stringify({ detail: error.message }, null, 2);
+    }
+    throw error;
+  }
 }
 
 function exportState() {
@@ -1610,6 +1991,14 @@ function setupEvents() {
   $('#ragForm').addEventListener('submit', event => { event.preventDefault(); ragSearch().catch(error => toast(error.message, 'error')); });
   $('#customEventForm').addEventListener('submit', event => { event.preventDefault(); publishCustomEvent(event.target).catch(error => toast(error.message, 'error')); });
   
+  const customForm = $('#customEventForm');
+  if (customForm) {
+    customForm.addEventListener('input', updateCurlCommand);
+    customForm.addEventListener('change', updateCurlCommand);
+    $('#apiHeaderAuth')?.addEventListener('input', updateCurlCommand);
+    updateCurlCommand();
+  }
+  
   $('#commandBtn').addEventListener('click', openSpotlight);
   $('#themeBtn').addEventListener('click', toggleTheme);
   $('#liveBtn').addEventListener('click', toggleLive);
@@ -1676,6 +2065,42 @@ function setupEvents() {
       state.playbooks[incId][idx].done = !state.playbooks[incId][idx].done;
       renderIncidentDetail(incId);
     }
+
+    // Doc card select for RAG chunk mapping
+    const docCard = event.target.closest('[data-document-card-id]');
+    if (docCard) {
+      const docId = docCard.dataset.documentCardId;
+      selectDocumentForChunkMap(docId);
+    }
+
+    // Graph drawer toggler
+    const toggleGraphDrawer = event.target.closest('#toggleGraphDrawerBtn');
+    if (toggleGraphDrawer) {
+      state.graphDrawerCollapsed = !state.graphDrawerCollapsed;
+      applyGraphDrawerCollapseState();
+    }
+
+    const closeGraphDrawer = event.target.closest('#closeGraphDrawerBtn');
+    if (closeGraphDrawer) {
+      state.graphDrawerCollapsed = true;
+      applyGraphDrawerCollapseState();
+    }
+
+    // Graph drawer tab selection
+    const drawerTab = event.target.closest('.drawer-tab-btn');
+    if (drawerTab) {
+      const tab = drawerTab.dataset.tab;
+      state.graphActiveTab = tab;
+      $$('.drawer-tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+      renderGraphDrawer();
+    }
+
+    // Clicking a node inside the Tactical Sidebar list zooms/centers onto it
+    const drawerNodeItem = event.target.closest('[data-drawer-node-id]');
+    if (drawerNodeItem) {
+      const nodeId = drawerNodeItem.dataset.drawerNodeId;
+      centerGraphOnNode(nodeId);
+    }
   });
 
   $('#incidentStatusFilter').addEventListener('change', event => { state.filters.incidentStatus = event.target.value; renderIncidentsPage(); });
@@ -1689,6 +2114,11 @@ function setupEvents() {
   });
   $('#eventFilter').addEventListener('input', event => { state.filters.event = event.target.value; renderEventsPage(); });
   $('#globalSearch').addEventListener('input', event => { state.filters.global = event.target.value; renderCurrent(); });
+  
+  $('#graphSearchInput')?.addEventListener('input', event => {
+    state.graphSearchQuery = event.target.value;
+    renderGraphDrawer();
+  });
 
   $('#modalHost').addEventListener('click', event => {
     if (event.target.matches('[data-close-modal], [data-close-modal-btn]')) closeModal();
@@ -1724,6 +2154,7 @@ function setupEvents() {
 
   window.addEventListener('resize', () => {
     if (state.currentView === 'overview') drawSparklines();
+    drawKpiSparklines();
     if (state.currentView === 'graph') renderGraphPage();
   });
 }

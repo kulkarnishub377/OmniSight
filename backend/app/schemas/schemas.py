@@ -96,6 +96,7 @@ class DocumentOut(BaseModel):
     document_type: str
     asset_id: Optional[str]
     chunk_count: int
+    text: str
     created_at: datetime
 
 

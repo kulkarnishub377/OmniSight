@@ -229,6 +229,7 @@ a {
   background: linear-gradient(180deg, hsl(var(--bg-hue), 40%, 4%), hsl(var(--bg-hue), 35%, 6%));
   border-right: 1px solid var(--line);
   z-index: 10;
+  overflow-y: auto;
 }
 
 .nav {
@@ -1647,6 +1648,33 @@ body.light .emit-card span {
   color: var(--muted);
 }
 
+body.light .btn.secondary {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text);
+  border-color: var(--line);
+}
+
+body.light .btn.secondary:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+body.light .btn.ghost {
+  color: var(--text);
+}
+
+body.light .btn.ghost:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body.light .nav-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+body.light .user-pill {
+  background: #ffffff;
+  border-color: var(--line);
+}
+
 body.light .agent-node {
   background: var(--bg-card);
   border-color: var(--line);
@@ -2365,4 +2393,47 @@ body.light .drawer-search {
 body.light .drawer-tab-btn.active {
   color: hsl(207, 95%, 45%);
   border-bottom-color: hsl(207, 95%, 45%);
+}
+
+/* AI Chat Card Styles */
+.ai-chat-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  margin-bottom: 24px;
+}
+.ai-chat-header {
+  padding: 16px 20px;
+  background: rgba(103, 232, 249, 0.05);
+  border-bottom: 1px solid var(--line);
+  align-items: center;
+}
+.ai-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--cyan), var(--violet));
+  color: #000;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 18px;
+}
+.ai-chat-body {
+  padding: 24px 20px;
+}
+.ai-summary-box {
+  background: linear-gradient(145deg, rgba(16, 24, 45, 0.6), rgba(12, 18, 34, 0.6));
+  border-left: 3px solid var(--cyan);
+  padding: 16px;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 16px;
+}
+body.light .ai-chat-card {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+}
+body.light .ai-summary-box {
+  background: rgba(103, 232, 249, 0.05);
 }

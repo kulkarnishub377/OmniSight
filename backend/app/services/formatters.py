@@ -59,6 +59,7 @@ def document_to_dict(document: Document) -> dict:
         'document_type': document.document_type,
         'asset_id': document.asset_id,
         'chunk_count': len(document.chunks),
+        'text': document.text,
         'created_at': document.created_at,
     }
 

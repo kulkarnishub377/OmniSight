@@ -206,14 +206,37 @@
             </div>
             <div class="divider"></div>
             <h4>Custom Event</h4>
-            <form id="customEventForm" class="form-grid two">
-              <label>Source ID<input name="source_id" value="webhook_demo" /></label>
-              <label>Source Type<input name="source_type" value="webhook" /></label>
-              <label>Event Type<input name="event_type" value="manual_observation" /></label>
-              <label>Severity<select name="severity"><option>low</option><option>medium</option><option>high</option></select></label>
-              <label class="span-2">Payload JSON<textarea name="payload">{"note":"operator observed unusual activity"}</textarea></label>
-              <button class="btn primary span-2" type="submit">Publish Canonical OmniSight Event</button>
-            </form>
+            <div class="playground-grid">
+              <!-- Left panel: Ingestion Request Configuration -->
+              <form id="customEventForm" class="form-grid single" style="margin:0;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                  <label>Auth Header<input id="apiHeaderAuth" value="Bearer os_live_79a32c" /></label>
+                  <label>Content-Type<input id="apiHeaderContent" value="application/json" disabled /></label>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                  <label>Source ID<input name="source_id" value="webhook_demo" /></label>
+                  <label>Source Type<input name="source_type" value="webhook" /></label>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                  <label>Event Type<input name="event_type" value="manual_observation" /></label>
+                  <label>Severity<select name="severity"><option>low</option><option>medium</option><option>high</option></select></label>
+                </div>
+                <label>Payload JSON<textarea name="payload" style="height:80px;">{"note":"operator observed unusual activity"}</textarea></label>
+                <button class="btn primary wide" type="submit">Publish Canonical OmniSight Event</button>
+              </form>
+              <!-- Right panel: Interactive cURL & HTTP Response HUD -->
+              <div class="playground-response">
+                <div style="color:var(--muted); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Ingestion cURL CLI</div>
+                <div id="curlCommandLine" class="curl-code">curl -X POST http://localhost:8000/api/events \
+  -H "Authorization: Bearer os_live_79a32c" \
+  -H "Content-Type: application/json" \
+  -d '{"source_id": "webhook_demo", "source_type": "webhook", "event_type": "manual_observation", "severity": "low", "payload": {"note": "operator observed unusual activity"}}'</div>
+                <div style="color:var(--muted); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; margin-top:8px;">Live API Response HUD</div>
+                <div id="playgroundResponseStatus" style="font-weight:700; color:#38bdf8;">HTTP/1.1 100 Continue (Awaiting submit)</div>
+                <div id="playgroundResponseHeaders" class="response-header-val" style="white-space:pre-wrap; opacity:0.85; line-height:1.3; font-size:10px;"></div>
+                <pre id="playgroundResponsePayload" style="margin:0; color:#34d399; font-size:10px; overflow-x:auto;"></pre>
+              </div>
+            </div>
           </section>
           <section class="panel">
             <div class="panel-head"><div><h3>Event Bus Topics</h3><p>Redpanda-ready streaming contracts.</p></div></div>
@@ -247,6 +270,19 @@
             <div id="ragResults" class="stack results"></div>
           </section>
         </div>
+
+        <!-- RAG Semantic Chunk Grid Map panel -->
+        <section class="panel chunk-grid-container hidden" id="chunkGridContainer">
+          <div class="panel-head">
+            <div>
+              <h3>Semantic Chunk Map: <span id="chunkGridDocName" style="color:var(--cyan);">None</span></h3>
+              <p>Visual map of document chunks. Hover over any block to inspect chunk snippet and token count. Matches highlight in real-time on RAG query searches.</p>
+            </div>
+            <button class="btn small secondary" id="closeChunkGridBtn">Close Map</button>
+          </div>
+          <div id="chunkGrid" class="chunk-grid"></div>
+        </section>
+
         <section class="panel"><div class="panel-head"><div><h3>Indexed Documents</h3><p>Operational manuals and evidence corpus.</p></div></div><div id="documentList" class="card-grid"></div></section>
       </section>
 
@@ -320,19 +356,40 @@
 
       <!-- Graph View -->
       <section class="view" id="view-graph">
-        <section class="panel">
-          <div class="panel-head">
-            <div>
-              <h3>Knowledge Graph</h3>
-              <p>Interactive graph showing relationships between incidents, events, documents, and locations. Hover over nodes to highlight connections.</p>
+        <div class="graph-layout-grid">
+          <!-- Left side: Knowledge Graph panel -->
+          <section class="panel" style="margin-bottom:0; min-width:0;">
+            <div class="panel-head">
+              <div>
+                <h3>Knowledge Graph</h3>
+                <p>Interactive graph showing relationships between incidents, events, documents, and locations. Hover over nodes to highlight connections.</p>
+              </div>
+              <div style="display:flex; gap:10px;">
+                <button id="toggleGraphDrawerBtn" class="btn secondary">Tactical Sidebar</button>
+                <button id="reloadGraphBtn" class="btn secondary">Reload Graph</button>
+              </div>
             </div>
-            <button id="reloadGraphBtn" class="btn secondary">Reload Graph</button>
-          </div>
-          <div id="graphCanvas" class="graph-canvas"></div>
-        </section>
-        <div class="content-grid two">
-          <section class="panel"><h3>Graph Nodes</h3><div id="graphNodes" class="stack small-stack"></div></section>
-          <section class="panel"><h3>Graph Edges</h3><div id="graphEdges" class="stack small-stack"></div></section>
+            <div id="graphCanvas" class="graph-canvas"></div>
+          </section>
+
+          <!-- Right side: Collapsible Tactical Sidebar -->
+          <aside id="graphDrawer" class="graph-drawer">
+            <div class="drawer-head" style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--line); padding-bottom: 10px;">
+              <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:var(--cyan); font-weight:800;">Tactical Drawer</h4>
+              <button class="icon-btn" id="closeGraphDrawerBtn" style="font-size:14px; width:22px; height:22px; border-radius:4px;">×</button>
+            </div>
+            <div class="drawer-search">
+              <span>⌕</span>
+              <input id="graphSearchInput" placeholder="Filter node/edge or jump..." />
+            </div>
+            <div class="drawer-tabs">
+              <button class="drawer-tab-btn active" id="graphTabNodes" data-tab="nodes">Nodes</button>
+              <button class="drawer-tab-btn" id="graphTabEdges" data-tab="edges">Edges</button>
+            </div>
+            <div id="graphDrawerList" class="drawer-list">
+              <!-- Dynamically populated node or edge list -->
+            </div>
+          </aside>
         </div>
       </section>
 
