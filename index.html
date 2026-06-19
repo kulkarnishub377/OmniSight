@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <link rel="stylesheet" href="/static/assets/home.css" />
+  <link rel="stylesheet" href="static/assets/home.css" />
   <style>
     /* Inline styles for the dynamic doc viewer */
     .doc-viewer-grid { display: grid; grid-template-columns: 280px 1fr; gap: 30px; margin-top: 40px; }
@@ -45,8 +45,8 @@
     </nav>
     <div class="header-actions">
       <button id="themeToggle" class="icon-btn" title="Toggle theme">◐</button>
-      <a class="btn ghost" href="/docs" target="_blank">API Docs</a>
-      <a class="btn primary" href="/static/console.html">Launch Console</a>
+      <a class="btn ghost" href="/api-docs" target="_blank">API Docs</a>
+      <a class="btn primary" href="static/console.html">Launch Console</a>
     </div>
     <button id="mobileMenuBtn" class="mobile-menu" aria-label="Open menu">☰</button>
   </header>
@@ -58,8 +58,8 @@
         <h1>Autonomous Multi-Modal Incident Intelligence Fabric</h1>
         <p class="hero-lead">OmniSight turns camera, sensor, audio, document, and API signals into evidence-backed incident investigations with agentic reasoning, safety guardrails, observability, and a polished operator console.</p>
         <div class="hero-actions">
-          <a class="btn primary large" href="/static/console.html">Open Operator Console</a>
-          <a class="btn secondary large" href="/static/architecture.html">View Architecture</a>
+          <a class="btn primary large" href="static/console.html">Open Operator Console</a>
+          <a class="btn secondary large" href="static/architecture.html">View Architecture</a>
           <a class="btn ghost large" href="#docs-section">Read Documentation</a>
         </div>
         <div class="trust-row" aria-label="Core loop">
@@ -126,11 +126,11 @@
       </div>
       <div class="doc-viewer-grid reveal">
         <div class="doc-sidebar" id="docSidebar">
-          <button class="doc-link active" onclick="loadMarkdown('/docs_files/senior-architecture-blueprint.md', this)">Senior Architecture Blueprint</button>
-          <button class="doc-link" onclick="loadMarkdown('/docs_files/architecture.md', this)">System Architecture</button>
-          <button class="doc-link" onclick="loadMarkdown('/docs_files/api-spec.md', this)">API Specifications</button>
-          <button class="doc-link" onclick="loadMarkdown('/docs_files/frontend-ux.md', this)">Frontend UX Guidelines</button>
-          <button class="doc-link" onclick="loadMarkdown('/docs_files/evaluation.md', this)">Evaluation Criteria</button>
+          <button class="doc-link active" onclick="loadMarkdown('docs/senior-architecture-blueprint.md', this)">Senior Architecture Blueprint</button>
+          <button class="doc-link" onclick="loadMarkdown('docs/architecture.md', this)">System Architecture</button>
+          <button class="doc-link" onclick="loadMarkdown('docs/api-spec.md', this)">API Specifications</button>
+          <button class="doc-link" onclick="loadMarkdown('docs/frontend-ux.md', this)">Frontend UX Guidelines</button>
+          <button class="doc-link" onclick="loadMarkdown('docs/evaluation.md', this)">Evaluation Criteria</button>
         </div>
         <div class="doc-content" id="markdownViewer">
           <h2>Select a document from the sidebar to view it here.</h2>
@@ -181,12 +181,12 @@
         <article class="structure-card reveal">
           <div class="card-head"><h3>Frontend Routes</h3><span>Static UI</span></div>
           <div class="route-list">
-            <a href="/">/ <small>Professional project home page</small></a>
-            <a href="/static/console.html">/static/console.html <small>Full OmniSight operator dashboard</small></a>
-            <a href="/static/architecture.html">/static/architecture.html <small>System architecture visual</small></a>
-            <a href="/reports/AMIF_Interactive_Project_Report.html">/reports/AMIF_Interactive_Project_Report.html <small>Interactive report</small></a>
-            <a href="/reports/AMIF_Complete_Project_Report.pdf">/reports/AMIF_Complete_Project_Report.pdf <small>PDF report</small></a>
-            <a href="/reports/AMIF_Project_Presentation.pptx">/reports/AMIF_Project_Presentation.pptx <small>Presentation</small></a>
+            <a href="index.html">index.html <small>Professional project home page</small></a>
+            <a href="static/console.html">static/console.html <small>Full OmniSight operator dashboard</small></a>
+            <a href="static/architecture.html">static/architecture.html <small>System architecture visual</small></a>
+            <a href="reports/AMIF_Interactive_Project_Report.html">reports/AMIF_Interactive_Project_Report.html <small>Interactive report</small></a>
+            <a href="reports/AMIF_Complete_Project_Report.pdf">reports/AMIF_Complete_Project_Report.pdf <small>PDF report</small></a>
+            <a href="reports/AMIF_Project_Presentation.pptx">reports/AMIF_Project_Presentation.pptx <small>Presentation</small></a>
           </div>
         </article>
       </div>
@@ -198,22 +198,22 @@
         <h2>Reports, architecture, and developer resources</h2>
       </div>
       <div class="resource-grid">
-        <a class="resource-card reveal" href="/static/console.html"><b>Operator Console</b><span>Run the full OmniSight dashboard</span></a>
-        <a class="resource-card reveal" href="/static/architecture.html"><b>Architecture Page</b><span>System architecture visual</span></a>
-        <a class="resource-card reveal" href="/reports/AMIF_Interactive_Project_Report.html"><b>Interactive Report</b><span>Full visual project report</span></a>
-        <a class="resource-card reveal" href="/reports/AMIF_Complete_Project_Report.pdf"><b>PDF Report</b><span>Detailed downloadable report</span></a>
-        <a class="resource-card reveal" href="/reports/AMIF_Project_Presentation.pptx"><b>Presentation</b><span>PowerPoint project slides</span></a>
-        <a class="resource-card reveal" href="/docs" target="_blank"><b>API Docs</b><span>FastAPI OpenAPI documentation</span></a>
+        <a class="resource-card reveal" href="static/console.html"><b>Operator Console</b><span>Run the full OmniSight dashboard</span></a>
+        <a class="resource-card reveal" href="static/architecture.html"><b>Architecture Page</b><span>System architecture visual</span></a>
+        <a class="resource-card reveal" href="reports/AMIF_Interactive_Project_Report.html"><b>Interactive Report</b><span>Full visual project report</span></a>
+        <a class="resource-card reveal" href="reports/AMIF_Complete_Project_Report.pdf"><b>PDF Report</b><span>Detailed downloadable report</span></a>
+        <a class="resource-card reveal" href="reports/AMIF_Project_Presentation.pptx"><b>Presentation</b><span>PowerPoint project slides</span></a>
+        <a class="resource-card reveal" href="/api-docs" target="_blank"><b>API Docs</b><span>FastAPI OpenAPI documentation</span></a>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
     <div><b>OmniSight v1.0</b><span>Autonomous Multi-Modal Intelligence Fabric</span></div>
-    <a href="/static/console.html">Launch Console →</a>
+    <a href="static/console.html">Launch Console →</a>
   </footer>
 
-  <script src="/static/assets/home.js"></script>
+  <script src="static/assets/home.js"></script>
   <script>
     // Initialize the markdown viewer
     async function loadMarkdown(filepath, btnElement) {
@@ -236,7 +236,7 @@
     // Auto-load first doc on startup if fetch is available
     window.addEventListener('DOMContentLoaded', () => {
       const firstBtn = document.querySelector('.doc-link');
-      if (firstBtn) loadMarkdown('/docs_files/senior-architecture-blueprint.md', firstBtn);
+      if (firstBtn) loadMarkdown('docs/senior-architecture-blueprint.md', firstBtn);
     });
   </script>
 </body>

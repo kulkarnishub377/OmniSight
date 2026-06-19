@@ -37,6 +37,7 @@ app = FastAPI(
     description='Autonomous Multi-Modal Incident Intelligence Fabric',
     version='1.0.0',
     lifespan=lifespan,
+    docs_url='/api-docs',
 )
 
 app.state.limiter = limiter
@@ -70,9 +71,9 @@ if Instrumentator:
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-app.mount('/static', StaticFiles(directory=os.path.join(BASE_DIR, 'backend/app/static')), name='static')
+app.mount('/static', StaticFiles(directory=os.path.join(BASE_DIR, 'static')), name='static')
 app.mount('/reports', StaticFiles(directory=os.path.join(BASE_DIR, 'reports')), name='reports')
-app.mount('/docs_files', StaticFiles(directory=os.path.join(BASE_DIR, 'docs')), name='docs_files')
+app.mount('/docs', StaticFiles(directory=os.path.join(BASE_DIR, 'docs')), name='docs')
 
 @app.get('/')
 def read_root():
