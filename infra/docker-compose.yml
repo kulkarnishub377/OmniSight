@@ -1,0 +1,84 @@
+version: "3.8"
+
+services:
+  # 1. Message Broker: Redpanda (Kafka compatible, faster, no Zookeeper)
+  redpanda:
+    image: vectorized/redpanda:latest
+    container_name: omnisight-redpanda
+    command:
+      - redpanda
+      - start
+      - --smp 1
+      - --memory 1G
+      - --reserve-memory 0M
+      - --overprovisioned
+      - --node-id 0
+      - --check=false
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Graph Database: Neo4j for Spatial Intelligence
+  neo4j:
+    image: neo4j:5.12.0
+    container_name: omnisight-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/omnisight_secure_pass
+      NEO4J_apoc_export_file_enabled: "true"
+      NEO4J_apoc_import_file_enabled: "true"
+      NEO4J_apoc_import_file_use__neo4j__config: "true"
+    ports:
+      - "7474:7474" # HTTP GUI
+      - "7687:7687" # Bolt Protocol
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "omnisight_secure_pass", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 3. Vector Database: Qdrant for RAG and Multi-Modal Embeddings
+  qdrant:
+    image: qdrant/qdrant:v1.6.1
+    container_name: omnisight-qdrant
+    ports:
+      - "6333:6333" # REST API
+      - "6334:6334" # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 4. In-Memory Datastore: Redis for API Keys, Workflows (Celery), and Episodic Memory
+  redis:
+    image: redis:7-alpine
+    container_name: omnisight-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redpanda_data:
+  neo4j_data:
+  qdrant_data:
+  redis_data:
