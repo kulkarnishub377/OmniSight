@@ -1,7 +1,8 @@
 from functools import lru_cache
 from typing import List
 
-from pydantic import field_validator
+import secrets
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,7 +11,7 @@ class Settings(BaseSettings):
 
     app_name: str = 'AMIF'
     env: str = 'dev'
-    secret_key: str = 'change-me-in-production'
+    secret_key: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
     algorithm: str = 'HS256'
     access_token_expire_minutes: int = 480
 
