@@ -422,15 +422,32 @@ body.light .auth-foot a {
   border-radius: var(--radius-sm);
   padding: 0 14px;
   color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.global-search:focus-within {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px var(--cyan-glow);
+}
+
+.global-search span {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
 }
 
 .global-search input {
-  border: 0;
-  background: transparent;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
   color: var(--text);
   outline: 0;
   width: 100%;
   font-size: 14px;
+  height: 100%;
+  padding: 0;
 }
 
 /* Buttons */
@@ -573,15 +590,15 @@ body.light .auth-foot a {
 }
 
 .content-grid.two {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .content-grid.two-one {
-  grid-template-columns: 1.4fr 0.8fr;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr);
 }
 
 .content-grid.master-detail {
-  grid-template-columns: minmax(360px, 0.85fr) 1.25fr;
+  grid-template-columns: minmax(360px, 0.85fr) minmax(0, 1.25fr);
 }
 
 .sticky-detail {
