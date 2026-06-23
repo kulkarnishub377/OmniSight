@@ -2098,6 +2098,7 @@ function setupEvents() {
   });
   
   $('#logoutBtn')?.addEventListener('click', () => logout());
+  $('#openCreateUserModalBtn')?.addEventListener('click', openCreateUserDialog);
   $('#refreshBtn')?.addEventListener('click', () => refreshAll());
   $('#seedDemoBtn')?.addEventListener('click', () => seedDemo().catch(error => toast(error.message, 'error')));
   $('#emitVision')?.addEventListener('click', () => emitVision().catch(error => toast(error.message, 'error')));
