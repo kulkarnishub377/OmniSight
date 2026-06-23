@@ -1982,22 +1982,22 @@ function runSpotlightCommand(index = state.spotlightIndex) {
    ========================================== */
 
 function setupEvents() {
-  $('#loginForm').addEventListener('submit', event => {
+  $('#loginForm')?.addEventListener('submit', event => {
     event.preventDefault();
-    login($('#loginEmail').value, $('#loginPassword').value).catch(error => toast(error.message, 'error'));
+    login($('#loginEmail')?.value, $('#loginPassword')?.value).catch(error => toast(error.message, 'error'));
   });
   
-  $('#logoutBtn').addEventListener('click', () => logout());
-  $('#refreshBtn').addEventListener('click', () => refreshAll());
-  $('#seedDemoBtn').addEventListener('click', () => seedDemo().catch(error => toast(error.message, 'error')));
-  $('#emitVision').addEventListener('click', () => emitVision().catch(error => toast(error.message, 'error')));
-  $('#emitTemp').addEventListener('click', () => emitTemp().catch(error => toast(error.message, 'error')));
-  $('#emitAudio').addEventListener('click', () => emitAudio().catch(error => toast(error.message, 'error')));
-  $('#reloadGraphBtn').addEventListener('click', () => refreshAll({ quiet: true }).then(renderGraphPage));
+  $('#logoutBtn')?.addEventListener('click', () => logout());
+  $('#refreshBtn')?.addEventListener('click', () => refreshAll());
+  $('#seedDemoBtn')?.addEventListener('click', () => seedDemo().catch(error => toast(error.message, 'error')));
+  $('#emitVision')?.addEventListener('click', () => emitVision().catch(error => toast(error.message, 'error')));
+  $('#emitTemp')?.addEventListener('click', () => emitTemp().catch(error => toast(error.message, 'error')));
+  $('#emitAudio')?.addEventListener('click', () => emitAudio().catch(error => toast(error.message, 'error')));
+  $('#reloadGraphBtn')?.addEventListener('click', () => refreshAll({ quiet: true }).then(renderGraphPage));
   
-  $('#docUploadForm').addEventListener('submit', event => { event.preventDefault(); uploadDocument().catch(error => toast(error.message, 'error')); });
-  $('#ragForm').addEventListener('submit', event => { event.preventDefault(); ragSearch().catch(error => toast(error.message, 'error')); });
-  $('#customEventForm').addEventListener('submit', event => { event.preventDefault(); publishCustomEvent(event.target).catch(error => toast(error.message, 'error')); });
+  $('#docUploadForm')?.addEventListener('submit', event => { event.preventDefault(); uploadDocument().catch(error => toast(error.message, 'error')); });
+  $('#ragForm')?.addEventListener('submit', event => { event.preventDefault(); ragSearch().catch(error => toast(error.message, 'error')); });
+  $('#customEventForm')?.addEventListener('submit', event => { event.preventDefault(); publishCustomEvent(event.target).catch(error => toast(error.message, 'error')); });
   
   const customForm = $('#customEventForm');
   if (customForm) {
@@ -2017,9 +2017,9 @@ function setupEvents() {
   $('#bannerSettingsBtn')?.addEventListener('click', openSettings);
   $('#closeSettingsBtn')?.addEventListener('click', closeSettings);
   $('#saveSettingsBtn')?.addEventListener('click', saveSettings);
-  $('#settingsModal').addEventListener('click', event => { if (event.target.id === 'settingsModal') closeSettings(); });
+  $('#settingsModal')?.addEventListener('click', event => { if (event.target.id === 'settingsModal') closeSettings(); });
 
-  $('#nav').addEventListener('click', event => {
+  $('#nav')?.addEventListener('click', event => {
     const button = event.target.closest('[data-view]');
     if (button) {
       setView(button.dataset.view);
