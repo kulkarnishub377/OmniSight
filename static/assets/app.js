@@ -1108,6 +1108,7 @@ function renderIncidentDetail(id) {
     <div class="camera-feed">
       <div class="scanlines"></div>
       <div class="grid-overlay"></div>
+      <div class="scanner"></div>
       <div class="feed-header">
         <div><span class="live-dot pulse-dot"></span><b>LIVE Feed</b></div>
         <span class="cam-id">CAM_A01_ZONE_A / SEC_EAST_01</span>
@@ -1366,10 +1367,10 @@ function renderGraphSvg(nodes, edges) {
   const nodeSvg = nodes.map((node, index) => {
     const p = pos[node.id];
     const c = color(node.type);
-    return `<g data-node-id="${escapeHtml(node.id)}" class="graph-node" style="animation:fadeUp .35s ease ${index * 20}ms both"><circle cx="${p.x}" cy="${p.y}" r="15" fill="${c}" opacity=".9"/><circle cx="${p.x}" cy="${p.y}" r="26" fill="${c}" opacity=".1"/><text class="node-label" x="${p.x + 22}" y="${p.y + 4}">${escapeHtml(String(node.label).slice(0, 24))}</text></g>`;
+    return `<g data-node-id="${escapeHtml(node.id)}" class="graph-node" style="animation:fadeUp .35s ease ${index * 20}ms both"><circle cx="${p.x}" cy="${p.y}" r="15" fill="${c}" opacity=".95" filter="url(#nodeGlow)"/><circle cx="${p.x}" cy="${p.y}" r="24" fill="${c}" opacity=".15"/><text class="node-label" x="${p.x + 22}" y="${p.y + 4}">${escapeHtml(String(node.label).slice(0, 24))}</text></g>`;
   }).join('');
   
-  return `<svg viewBox="0 0 ${w} ${h}" id="graphSvg" role="img" aria-label="Knowledge graph"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="18" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#334155"/></marker></defs>${edgeSvg}${nodeSvg}</svg>`;
+  return `<svg viewBox="0 0 ${w} ${h}" id="graphSvg" role="img" aria-label="Knowledge graph"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="18" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#334155"/></marker><filter id="nodeGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>${edgeSvg}${nodeSvg}</svg>`;
 }
 
 function initInteractiveGraph() {

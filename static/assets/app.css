@@ -101,8 +101,12 @@ a {
   display: grid;
   place-items: center;
   padding: 24px;
-  background: radial-gradient(circle at center, hsl(var(--bg-hue), 40%, 12%) 0%, var(--bg) 100%);
+  background: radial-gradient(circle at 10% 0%, #0c1224 0%, #030712 100%);
   z-index: 1000;
+}
+
+body.light .auth-screen {
+  background: radial-gradient(circle at 10% 0%, #f1f5f9 0%, #cbd5e1 100%);
 }
 
 .auth-card {
@@ -111,8 +115,17 @@ a {
   grid-template-columns: 1.1fr 0.9fr;
   gap: 32px;
   border-radius: var(--radius);
-  padding: 36px;
+  padding: 40px;
+  background: rgba(15, 23, 42, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
   animation: modalIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+body.light .auth-card {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.06);
 }
 
 .brand-lockup {
@@ -154,10 +167,10 @@ a {
 }
 
 .auth-hero {
-  padding: 32px;
+  padding: 36px;
   border-radius: var(--radius);
-  background: linear-gradient(145deg, rgba(103, 232, 249, 0.08), rgba(167, 139, 250, 0.04));
-  border: 1px solid rgba(103, 232, 249, 0.12);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -168,21 +181,22 @@ a {
   font-weight: 800;
   line-height: 1.15;
   margin: 16px 0;
-  background: linear-gradient(to right, var(--text), var(--soft));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #ffffff !important;
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: initial !important;
 }
 
 .auth-hero p {
-  color: var(--muted);
+  color: #94a3b8 !important;
   font-size: 14px;
   line-height: 1.6;
 }
 
 .hero-chip {
   align-self: start;
-  border: 1px solid rgba(103, 232, 249, 0.25);
+  border: 1px solid rgba(103, 232, 249, 0.35);
   background: rgba(103, 232, 249, 0.08);
   border-radius: 99px;
   padding: 6px 12px;
@@ -191,6 +205,40 @@ a {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.auth-card label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 2px;
+  text-transform: uppercase;
+}
+
+.auth-card input {
+  background: rgba(0, 0, 0, 0.2) !important;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: var(--text);
+  width: 100%;
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+body.light .auth-card input {
+  background: #f8fafc !important;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.auth-card button[type="submit"] {
+  margin-top: 10px;
+  height: 48px;
+  border-radius: 12px;
+  font-size: 15px;
+  letter-spacing: -0.01em;
 }
 
 .auth-foot {
@@ -206,6 +254,9 @@ a {
 
 .auth-foot a {
   color: var(--cyan);
+}
+body.light .auth-foot a {
+  color: #2563eb;
 }
 .auth-foot a:hover {
   text-decoration: underline;
@@ -226,7 +277,7 @@ a {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  background: linear-gradient(180deg, hsl(var(--bg-hue), 40%, 4%), hsl(var(--bg-hue), 35%, 6%));
+  background: linear-gradient(180deg, #030712 0%, #070b16 100%);
   border-right: 1px solid var(--line);
   z-index: 10;
   overflow-y: auto;
@@ -250,6 +301,7 @@ a {
   cursor: pointer;
   font-weight: 600;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-left: 4px solid transparent;
 }
 
 .nav-item span {
@@ -264,10 +316,11 @@ a {
 }
 
 .nav-item.active {
-  background: rgba(103, 232, 249, 0.08);
+  background: linear-gradient(90deg, rgba(103, 232, 249, 0.12) 0%, rgba(103, 232, 249, 0.02) 100%);
   color: var(--cyan);
-  border-left: 3px solid var(--cyan);
-  padding-left: 13px;
+  border-left-color: var(--cyan);
+  padding-left: 12px;
+  box-shadow: inset 0 0 12px rgba(103, 232, 249, 0.05);
 }
 
 .nav-item.active span {
@@ -1070,18 +1123,54 @@ pre, .code {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.015);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  padding: 12px 16px;
+  padding: 14px 18px;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+.playbook-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+body.light .playbook-item {
+  background: #ffffff;
+  border-color: var(--line);
+}
+body.light .playbook-item:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
 }
 
 .playbook-item input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--cyan);
-  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  display: inline-grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  margin: 0;
+}
+.playbook-item input[type="checkbox"]:checked {
+  background: var(--green) !important;
+  border-color: var(--green) !important;
+}
+.playbook-item input[type="checkbox"]:checked::after {
+  content: "✓";
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+}
+body.light .playbook-item input[type="checkbox"] {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 .playbook-item span {
@@ -1607,7 +1696,14 @@ body.light {
 }
 
 body.light .sidebar {
-  background: linear-gradient(180deg, hsl(226, 20%, 94%), hsl(226, 15%, 90%));
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border-right-color: #e2e8f0;
+}
+
+body.light .nav-item.active {
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.01) 100%);
+  color: #2563eb;
+  border-left-color: #2563eb;
 }
 
 body.light .panel, 
@@ -2190,6 +2286,24 @@ body.light .spotlight-input {
   font-size: 9px;
   color: var(--cyan);
   text-shadow: 0 1px 3px #000;
+}
+
+/* CCTV HUD Scanner effect */
+.camera-feed .scanner {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--red), transparent);
+  box-shadow: 0 0 10px var(--red);
+  animation: scanMove 4s infinite linear;
+  z-index: 6;
+  opacity: 0.85;
+}
+@keyframes scanMove {
+  0% { top: 0%; }
+  50% { top: 100%; }
+  100% { top: 0%; }
 }
 
 /* KPI Card Sparklines */
