@@ -1993,142 +1993,138 @@ body.compact .main {
   transform: translateX(-2px);
 }
 
-@media (max-width: 1200px) {
+/* Sidebar slide-out overlay backdrop */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9998;
+  transition: opacity 0.3s ease;
+}
+
+@media (max-width: 900px) {
   .app-shell {
-    grid-template-columns: 80px 1fr;
+    grid-template-columns: 1fr;
   }
+  
   .sidebar {
-    padding: 20px 12px;
-    align-items: center;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    z-index: 9999;
+    border-right: 1px solid var(--line);
+    box-shadow: 20px 0 50px rgba(0, 0, 0, 0.3);
   }
-  .sidebar .brand-lockup div:not(.brand-mark), 
-  .nav-item {
-    font-size: 0;
-    padding: 12px;
-    justify-content: center;
+  
+  body.light .sidebar {
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+    border-right-color: #e2e8f0;
   }
-  .nav-item span {
-    font-size: 20px;
+  
+  .sidebar.open {
+    transform: translateX(0);
   }
-  .side-card, .sidebar-footer .user-pill {
-    display: none;
+  
+  #consoleMobileMenuBtn {
+    display: flex !important;
   }
-  .sidebar-footer {
+  
+  .main {
+    padding: 16px;
+  }
+  
+  .topbar {
+    position: sticky;
+    top: 0;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    z-index: 100;
+  }
+  
+  .top-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
     width: 100%;
-    display: flex;
-    justify-content: center;
+    justify-content: flex-start;
   }
-  #logoutBtn {
-    font-size: 0;
-    padding: 12px;
-    width: 44px;
-    height: 44px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: var(--radius-sm);
+  
+  .global-search {
+    width: 100%;
+    min-width: 100%;
   }
-  #logoutBtn span {
-    font-size: 20px;
-    color: var(--red);
-    margin: 0;
-  }
+
   .kpi-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
   }
+  
+  .playground-grid {
+    grid-template-columns: 1fr;
+  }
+  
   .content-grid.two-one, 
   .content-grid.master-detail, 
   .content-grid.two {
     grid-template-columns: 1fr;
   }
+  
   .sticky-detail {
     position: static;
   }
+  
   .agent-pipeline {
     grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  
+  .emit-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-grid.two {
+    grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 768px) {
-  .app-shell {
-    grid-template-columns: 1fr;
-  }
-  .sidebar {
-    position: sticky;
-    top: 0;
-    height: auto;
-    flex-direction: row;
+@media (max-width: 576px) {
+  .top-actions {
     justify-content: space-between;
-    align-items: center;
-    overflow-x: auto;
-    padding: 12px 20px;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-    z-index: 1000;
   }
-  .sidebar .brand-lockup div:not(.brand-mark) {
-    display: none;
-  }
-  .nav {
-    display: flex;
-    flex-direction: row;
-    gap: 6px;
-  }
-  .nav-item {
-    padding: 8px;
-    font-size: 0;
-  }
-  .nav-item span {
-    font-size: 18px;
-  }
-  .sidebar-footer {
-    display: block;
-    margin-top: 0;
-    margin-left: 12px;
-  }
-  .sidebar-footer .user-pill {
-    display: none;
-  }
-  #logoutBtn {
-    font-size: 0;
-    padding: 8px;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: var(--radius-sm);
-  }
-  #logoutBtn span {
-    font-size: 18px;
-    color: var(--red);
-    margin: 0;
-  }
-  .side-card {
-    display: none;
-  }
-  .main {
-    padding: 16px;
-  }
-  .topbar {
-    position: static;
-    display: grid;
-    gap: 12px;
-  }
-  .global-search {
-    width: 100%;
-  }
+  
   .kpi-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr 1fr;
   }
-  .form-grid.two, .emit-grid, .agent-pipeline {
+  
+  .agent-pipeline {
     grid-template-columns: 1fr;
   }
+  
   .auth-card {
     grid-template-columns: 1fr;
+    padding: 24px;
+    gap: 20px;
   }
-  .auth-hero h2 {
-    font-size: 26px;
+  
+  .auth-hero {
+    display: none; /* Hide hero on small mobile to keep form simple */
+  }
+  
+  .modal {
+    width: 100%;
+    max-height: 95vh;
+  }
+  
+  .modal-body {
+    padding: 16px;
   }
 }
 

@@ -2018,8 +2018,27 @@ function setupEvents() {
 
   $('#nav').addEventListener('click', event => {
     const button = event.target.closest('[data-view]');
-    if (button) setView(button.dataset.view);
+    if (button) {
+      setView(button.dataset.view);
+      // Auto close sidebar drawer on mobile after clicking navigation item
+      $('#appSidebar')?.classList.remove('open');
+      $('#sidebarOverlay')?.classList.add('hidden');
+    }
   });
+
+  const consoleMobileMenuBtn = $('#consoleMobileMenuBtn');
+  const sidebarOverlay = $('#sidebarOverlay');
+  const appSidebar = $('#appSidebar');
+  if (consoleMobileMenuBtn && sidebarOverlay && appSidebar) {
+    consoleMobileMenuBtn.addEventListener('click', () => {
+      appSidebar.classList.add('open');
+      sidebarOverlay.classList.remove('hidden');
+    });
+    sidebarOverlay.addEventListener('click', () => {
+      appSidebar.classList.remove('open');
+      sidebarOverlay.classList.add('hidden');
+    });
+  }
 
   document.body.addEventListener('click', event => {
     const seedInline = event.target.closest('[data-seed-inline]');
