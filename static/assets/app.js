@@ -1875,19 +1875,19 @@ async function evaluateApiMode() {
   // Force sandbox mock mode on Github Pages
   if (window.location.hostname.includes('github.io')) {
     state.useMocks = true;
-    $('#sandboxBanner').classList.remove('hidden');
+    $('#sandboxBanner')?.classList.remove('hidden');
     return;
   }
 
   if (mode === 'mock') {
     state.useMocks = true;
-    $('#sandboxBanner').classList.remove('hidden');
+    $('#sandboxBanner')?.classList.remove('hidden');
     return;
   }
   
   if (mode === 'live') {
     state.useMocks = false;
-    $('#sandboxBanner').classList.add('hidden');
+    $('#sandboxBanner')?.classList.add('hidden');
     return;
   }
 
@@ -1902,14 +1902,14 @@ async function evaluateApiMode() {
     
     if (response.ok) {
       state.useMocks = false;
-      $('#sandboxBanner').classList.add('hidden');
+      $('#sandboxBanner')?.classList.add('hidden');
       console.log('FastAPI server detected. Live mode activated.');
     } else {
       throw new Error('Server offline');
     }
   } catch (e) {
     state.useMocks = true;
-    $('#sandboxBanner').classList.remove('hidden');
+    $('#sandboxBanner')?.classList.remove('hidden');
     console.warn('FastAPI server offline. Fallback to Local Sandbox Mode.');
   } finally {
     finishProgress(false);
@@ -2004,16 +2004,16 @@ function setupEvents() {
     updateCurlCommand();
   }
   
-  $('#commandBtn').addEventListener('click', openSpotlight);
-  $('#themeBtn').addEventListener('click', toggleTheme);
-  $('#liveBtn').addEventListener('click', toggleLive);
-  $('#exportBtn').addEventListener('click', exportState);
+  $('#commandBtn')?.addEventListener('click', openSpotlight);
+  $('#themeBtn')?.addEventListener('click', toggleTheme);
+  $('#liveBtn')?.addEventListener('click', toggleLive);
+  $('#exportBtn')?.addEventListener('click', exportState);
   
   // Settings Modal Bindings
-  $('#settingsBtn').addEventListener('click', openSettings);
-  $('#bannerSettingsBtn').addEventListener('click', openSettings);
-  $('#closeSettingsBtn').addEventListener('click', closeSettings);
-  $('#saveSettingsBtn').addEventListener('click', saveSettings);
+  $('#settingsBtn')?.addEventListener('click', openSettings);
+  $('#bannerSettingsBtn')?.addEventListener('click', openSettings);
+  $('#closeSettingsBtn')?.addEventListener('click', closeSettings);
+  $('#saveSettingsBtn')?.addEventListener('click', saveSettings);
   $('#settingsModal').addEventListener('click', event => { if (event.target.id === 'settingsModal') closeSettings(); });
 
   $('#nav').addEventListener('click', event => {
